@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { ModuleType } from '../types/receipt';
+import { setupNotifications } from '../services/notificationService';
 
 interface SettingsContextType {
   darkMode: boolean;
@@ -70,6 +71,7 @@ export const SettingsProvider = ({ children }: { children: React.ReactNode }) =>
   const setNotificationsEnabled = async (value: boolean) => {
     setNotificationsEnabledState(value);
     await AsyncStorage.setItem('setting_notifications', String(value));
+    await setupNotifications(value);
   };
 
   return (

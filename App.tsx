@@ -16,6 +16,8 @@ import CaptureScreen from './app/screens/captureScreen';
 import LedgerScreen from './app/screens/ledgerScreen';
 import OnboardingOverlay from './app/components/onboardingOverlay';
 import { SettingsProvider } from './app/context/settingsContext';
+import { requestNotificationPermission, setupNotifications } from './app/services/notificationService';
+import * as Notifications from 'expo-notifications';
 
 const Tab = createMaterialTopTabNavigator();
 
@@ -80,11 +82,33 @@ export default function App() {
     checkOnboarding();
   }, []);
 
+  useEffect(() => {
+    const subscription = Notifications.addNotificationResponseReceivedListener(response => {
+      const screen = response.notification.request.content.data?.screen;
+      if (screen && navigationRef.current) {
+        navigationRef.current.navigate(screen as never);
+      }
+    });
+    return () => subscription.remove();
+  }, []);
+
   const checkOnboarding = async () => {
+    // TODO: REMOVE BEFORE SHIP — forces onboarding to show every launch
     await AsyncStorage.removeItem('onboarding_complete'); // remove this line after testing
     const complete = await AsyncStorage.getItem('onboarding_complete');
     if (!complete) {
       setShowOnboarding(true);
+    }
+    // Request notification permission on first launch
+    const notifRequested = await AsyncStorage.getItem('notif_permission_requested');
+    if (!notifRequested) {
+      const granted = await requestNotificationPermission();
+      await AsyncStorage.setItem('notif_permission_requested', 'true');
+      if (granted) {
+        const notifEnabled = await AsyncStorage.getItem('setting_notifications');
+        const enabled = notifEnabled !== 'false';
+        await setupNotifications(enabled);
+      }
     }
   };
 

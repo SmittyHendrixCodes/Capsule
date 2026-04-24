@@ -22,6 +22,7 @@ import { analyzeReceipt, checkReceiptQuality, ReceiptData } from '../services/cl
 import ReviewSessionScreen, { QueuedReceipt } from './reviewSessionScreen';
 import { getTheme } from '../context/theme';
 import { useSettings } from '../context/settingsContext';
+import { scheduleSessionReminder, cancelSessionReminder } from '../services/notificationService';
 
 const SCREEN_HEIGHT = Dimensions.get('window').height;
 
@@ -97,6 +98,14 @@ export default function CaptureScreen() {
       ])
     ).start();
   }, []);
+
+  useEffect(() => {
+    if (sessionQueue.length > 0) {
+      scheduleSessionReminder(sessionQueue.length);
+    } else {
+      cancelSessionReminder();
+    }
+  }, [sessionQueue]);
 
   const handleImageCapture = async (base64: string, uri: string) => {
     setImage(uri);
