@@ -1,0 +1,47 @@
+{
+  "name": "capsule",
+  "version": "1.0.0",
+  "main": "index.ts",
+  "scripts": {
+    "start": "expo start",
+    "android": "expo start --android",
+    "ios": "expo start --ios",
+    "web": "expo start --web"
+  },
+  "dependencies": {
+    "@expo-google-fonts/poppins": "^0.4.1",
+    "@react-native-async-storage/async-storage": "2.2.0",
+    "@react-navigation/bottom-tabs": "^7.15.9",
+    "@react-navigation/material-top-tabs": "^7.4.23",
+    "@react-navigation/native": "^7.2.2",
+    "axios": "^1.15.0",
+    "babel-preset-expo": "54.0.10",
+    "expo": "~54.0.33",
+    "expo-camera": "~17.0.10",
+    "expo-document-picker": "~14.0.8",
+    "expo-file-system": "~19.0.21",
+    "expo-font": "~14.0.11",
+    "expo-image-picker": "~17.0.10",
+    "expo-media-library": "~18.2.1",
+    "expo-print": "~15.0.8",
+    "expo-sharing": "~14.0.8",
+    "expo-sqlite": "~16.0.10",
+    "expo-status-bar": "~3.0.9",
+    "react": "19.1.0",
+    "react-native": "0.81.5",
+    "react-native-chart-kit": "^6.12.0",
+    "react-native-dotenv": "^3.4.11",
+    "react-native-pager-view": "6.9.1",
+    "react-native-safe-area-context": "~5.6.0",
+    "react-native-screens": "~4.16.0",
+    "react-native-svg": "^15.15.4",
+    "xlsx": "^0.18.5",
+    "zustand": "^5.0.12"
+  },
+  "private": true,
+  "devDependencies": {
+    "@types/react": "^19.1.10",
+    "@types/react-native": "^0.72.8",
+    "typescript": "^5.9.3"
+  }
+}
