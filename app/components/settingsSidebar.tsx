@@ -15,6 +15,7 @@ import {
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useSettings } from '../context/settingsContext';
 import { ModuleType } from '../types/receipt';
+import { useAuth } from '../context/authContext';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
 const SIDEBAR_WIDTH = SCREEN_WIDTH * 0.82;
@@ -43,6 +44,7 @@ export default function SettingsSidebar({
   onClose,
   onReplayOnboarding,
 }: SettingsSidebarProps) {
+  const { signOut } = useAuth();
   const {
     darkMode, setDarkMode,
     defaultModule, setDefaultModule,
@@ -75,6 +77,7 @@ export default function SettingsSidebar({
   const subtextColor = 'rgba(255,255,255,0.6)';
 
   const handleReplayOnboarding = async () => {
+    console.log('Replay onboarding triggered!');
     await AsyncStorage.removeItem('onboarding_complete');
     onClose();
     setTimeout(() => onReplayOnboarding(), 300);
@@ -252,6 +255,20 @@ export default function SettingsSidebar({
                 <Text style={[styles.versionText, { color: subtextColor }]}>1.0.0</Text>
               </View>
             </View>
+
+            {/* Sign Out */}
+            <TouchableOpacity
+              style={[styles.card, { backgroundColor: cardBg }]}
+              onPress={async () => {
+                await signOut();
+                onClose();
+              }}
+            >
+              <View style={styles.actionRow}>
+                <Text style={[styles.actionText, { color: '#EF4444' }]}>🚪 Sign Out</Text>
+                <Text style={[styles.arrow, { color: '#EF4444' }]}>→</Text>
+              </View>
+            </TouchableOpacity>
 
             {/* Upgrade to Pro */}
             <TouchableOpacity

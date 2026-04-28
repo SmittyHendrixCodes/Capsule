@@ -39,7 +39,6 @@ export default function HomeScreen() {
 
   const [greeting, setGreeting] = useState('');
   const [showSettings, setShowSettings] = useState(false);
-  const [showOnboarding, setShowOnboarding] = useState(false);
   const { darkMode } = useSettings();
   const theme = getTheme(darkMode);
 
@@ -288,9 +287,7 @@ export default function HomeScreen() {
       <SettingsSidebar
         visible={showSettings}
         onClose={() => setShowSettings(false)}
-        onReplayOnboarding={() => {
-          setShowOnboarding(true);
-        }}
+        onReplayOnboarding={() => {}}
       />
     </ScrollView>
   );

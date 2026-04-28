@@ -14,10 +14,13 @@ import React, { useState, useEffect } from 'react';
 import HomeScreen from './app/screens/homeScreen';
 import CaptureScreen from './app/screens/captureScreen';
 import LedgerScreen from './app/screens/ledgerScreen';
-import OnboardingOverlay from './app/components/onboardingOverlay';
 import { SettingsProvider } from './app/context/settingsContext';
 import { requestNotificationPermission, setupNotifications } from './app/services/notificationService';
 import * as Notifications from 'expo-notifications';
+import { AuthProvider, useAuth } from './app/context/authContext';
+import * as LocalAuthentication from 'expo-local-authentication';
+import WelcomeScreen from './app/screens/welcomeScreen';
+import OnboardingOverlay from './app/components/onboardingOverlay';
 
 const Tab = createMaterialTopTabNavigator();
 
@@ -68,19 +71,108 @@ function FloatingTabBar({ state, descriptors, navigation }: any) {
   );
 }
 
+function RootNavigator() {
+  const { user, isGuest, loading, ready } = useAuth();
+  const [biometricChecked, setBiometricChecked] = useState(false);
+  const [showBiometric, setShowBiometric] = useState(false);
+  const [showOnboarding, setShowOnboarding] = useState(false);
+  const [currentScreen, setCurrentScreen] = useState<'Home' | 'Capture' | 'Ledger'>('Home');
+
+  useEffect(() => {
+    if (user && !biometricChecked) {
+      checkBiometrics();
+    }
+  }, [user]);
+
+  const checkBiometrics = async () => {
+    const hasHardware = await LocalAuthentication.hasHardwareAsync();
+    const isEnrolled = await LocalAuthentication.isEnrolledAsync();
+    if (hasHardware && isEnrolled) {
+      setShowBiometric(true);
+      const result = await LocalAuthentication.authenticateAsync({
+        promptMessage: 'Welcome back to Capsule',
+        fallbackLabel: 'Use Password',
+      });
+      if (result.success) {
+        setBiometricChecked(true);
+        setShowBiometric(false);
+      }
+    } else {
+      setBiometricChecked(true);
+    }
+  };
+
+  const handleAuthComplete = async () => {
+    const complete = await AsyncStorage.getItem('onboarding_complete');
+    if (!complete) {
+      setShowOnboarding(true);
+    }
+  };
+
+  const handleNavigate = (screen: 'Home' | 'Capture' | 'Ledger') => {
+    setCurrentScreen(screen);
+  };
+
+  if (loading || !ready) {
+    return (
+      <View style={{ flex: 1, backgroundColor: '#53727B', alignItems: 'center', justifyContent: 'center' }}>
+        <ActivityIndicator size="large" color="#DDDDDD" />
+      </View>
+    );
+  }
+
+  if (!user && !isGuest) {
+    return <WelcomeScreen onAuthComplete={handleAuthComplete} />;
+  }
+
+  if (user && !biometricChecked) {
+    return (
+      <View style={{ flex: 1, backgroundColor: '#53727B', alignItems: 'center', justifyContent: 'center' }}>
+        <ActivityIndicator size="large" color="#DDDDDD" />
+        <Text style={{ color: '#fff', fontFamily: 'Poppins_400Regular', marginTop: 16 }}>
+          Authenticating...
+        </Text>
+      </View>
+    );
+  }
+
+  return (
+    <>
+      <Tab.Navigator
+        tabBar={(props) => <FloatingTabBar {...props} />}
+        tabBarPosition="bottom"
+        screenOptions={{
+          swipeEnabled: true,
+          tabBarStyle: { display: 'none' },
+          tabBarIndicatorStyle: { display: 'none' },
+        }}
+      >
+        <Tab.Screen name="Home" component={HomeScreen} />
+        <Tab.Screen name="Capture" component={CaptureScreen} />
+        <Tab.Screen name="Ledger" component={LedgerScreen} />
+      </Tab.Navigator>
+
+      {showOnboarding && (
+        <OnboardingOverlay
+          currentScreen={currentScreen}
+          onNavigate={handleNavigate}
+          onComplete={async () => {
+            await AsyncStorage.setItem('onboarding_complete', 'true');
+            setShowOnboarding(false);
+          }}
+        />
+      )}
+    </>
+  );
+}
+
 export default function App() {
   const [fontsLoaded] = useFonts({
     Poppins_400Regular,
     Poppins_600SemiBold,
     Poppins_700Bold,
   });
-  const [showOnboarding, setShowOnboarding] = useState(false);
-  const [currentScreen, setCurrentScreen] = useState<'Home' | 'Capture' | 'Ledger'>('Home');
   const navigationRef = useNavigationContainerRef();
-
-  useEffect(() => {
-    checkOnboarding();
-  }, []);
 
   useEffect(() => {
     const subscription = Notifications.addNotificationResponseReceivedListener(response => {
@@ -92,75 +184,22 @@ export default function App() {
     return () => subscription.remove();
   }, []);
 
-  const checkOnboarding = async () => {
-    // TODO: REMOVE BEFORE SHIP — forces onboarding to show every launch
-    await AsyncStorage.removeItem('onboarding_complete'); // remove this line after testing
-    const complete = await AsyncStorage.getItem('onboarding_complete');
-    if (!complete) {
-      setShowOnboarding(true);
-    }
-    // Request notification permission on first launch
-    const notifRequested = await AsyncStorage.getItem('notif_permission_requested');
-    if (!notifRequested) {
-      const granted = await requestNotificationPermission();
-      await AsyncStorage.setItem('notif_permission_requested', 'true');
-      if (granted) {
-        const notifEnabled = await AsyncStorage.getItem('setting_notifications');
-        const enabled = notifEnabled !== 'false';
-        await setupNotifications(enabled);
-      }
-    }
-  };
-
-  const handleNavigate = (screen: 'Home' | 'Capture' | 'Ledger') => {
-    navigationRef.current?.navigate(screen as never);
-    setCurrentScreen(screen);
-  };
-
-  if (!fontsLoaded) {
-    return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#1C1C1E" />
-      </View>
-    );
-  }
-
   return (
-    <SettingsProvider>
-      <SafeAreaProvider>
-        <NavigationContainer
-          ref={navigationRef}
-          onStateChange={() => {
-            const route = navigationRef.current?.getCurrentRoute();
-            if (route?.name) {
-              setCurrentScreen(route.name as 'Home' | 'Capture' | 'Ledger');
-            }
-          }}
-        >
-          <Tab.Navigator
-            tabBar={(props) => <FloatingTabBar {...props} />}
-            tabBarPosition="bottom"
-            screenOptions={{ 
-              swipeEnabled: true,
-              tabBarStyle: { display: 'none' },
-              tabBarIndicatorStyle: { display: 'none' },
-            }}
-          >
-            <Tab.Screen name="Home" component={HomeScreen} />
-            <Tab.Screen name="Capture" component={CaptureScreen} />
-            <Tab.Screen name="Ledger" component={LedgerScreen} />
-          </Tab.Navigator>
-
-          {showOnboarding && (
-            <OnboardingOverlay
-              currentScreen={currentScreen}
-              onNavigate={handleNavigate}
-              onComplete={() => setShowOnboarding(false)}
-            />
-          )}
-        </NavigationContainer>
-      </SafeAreaProvider>
-    </SettingsProvider>
+    <AuthProvider>
+      <SettingsProvider>
+        <SafeAreaProvider>
+          <NavigationContainer ref={navigationRef}>
+          {!fontsLoaded ? (
+            <View style={styles.loadingContainer}>
+              <ActivityIndicator size="large" color="#1C1C1E" />
+          </View>
+        ) : (
+            <RootNavigator />
+        )}
+          </NavigationContainer>
+        </SafeAreaProvider>
+      </SettingsProvider>
+    </AuthProvider>
   );
 }
 
