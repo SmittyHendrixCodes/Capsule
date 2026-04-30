@@ -18,6 +18,7 @@ import SettingsSidebar from '../components/settingsSidebar';
 import { useSettings } from '../context/settingsContext';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { getTheme } from '../context/theme';
+import OnboardingOverlay from '../components/onboardingOverlay';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
 
@@ -39,6 +40,8 @@ export default function HomeScreen() {
 
   const [greeting, setGreeting] = useState('');
   const [showSettings, setShowSettings] = useState(false);
+  const [showOnboarding, setShowOnboarding] = useState(false);
+  const [currentScreen, setCurrentScreen] = useState<'Home' | 'Capture' | 'Ledger'>('Home');
   const { darkMode } = useSettings();
   const theme = getTheme(darkMode);
 
@@ -139,6 +142,7 @@ export default function HomeScreen() {
   };
 
   return (
+    <View>
     <ScrollView
       style={[styles.container, { backgroundColor: theme.background }]}
       contentContainerStyle={styles.content}
@@ -284,12 +288,28 @@ export default function HomeScreen() {
           </Text>
         </View>
       )}
+    </ScrollView>
+      {showOnboarding && (
+        <OnboardingOverlay
+          currentScreen="Home"
+          onNavigate={() => {}}
+          onComplete={async () => {
+            await AsyncStorage.setItem('onboarding_complete', 'true');
+            setShowOnboarding(false);
+          }}
+        />
+      )}
+
       <SettingsSidebar
         visible={showSettings}
         onClose={() => setShowSettings(false)}
-        onReplayOnboarding={() => {}}
+        onReplayOnboarding={() => setShowOnboarding(true)}
+        onViewProfile={() => {
+          console.log('onViewProfile called!');
+          navigation.navigate('Profile');
+        }}
       />
-    </ScrollView>
+    </View>
   );
 }
 

@@ -21,6 +21,7 @@ import { AuthProvider, useAuth } from './app/context/authContext';
 import * as LocalAuthentication from 'expo-local-authentication';
 import WelcomeScreen from './app/screens/welcomeScreen';
 import OnboardingOverlay from './app/components/onboardingOverlay';
+import ProfileScreen from './app/screens/profileScreen';
 
 const Tab = createMaterialTopTabNavigator();
 
@@ -38,6 +39,9 @@ function FloatingTabBar({ state, descriptors, navigation }: any) {
             Capture: '◎',
             Ledger: '≡',
           };
+
+          // Add this check to filter out Profile tab
+          if (!icons[route.name]) return null;
 
           const onPress = () => {
             const event = navigation.emit({
@@ -150,6 +154,8 @@ function RootNavigator() {
         <Tab.Screen name="Home" component={HomeScreen} />
         <Tab.Screen name="Capture" component={CaptureScreen} />
         <Tab.Screen name="Ledger" component={LedgerScreen} />
+        <Tab.Screen name="Profile" component={ProfileScreen}
+          options={{ swipeEnabled: false }}/>
       </Tab.Navigator>
 
       {showOnboarding && (

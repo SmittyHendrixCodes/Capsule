@@ -2,8 +2,11 @@
   "name": "capsule",
   "version": "1.0.0",
   "main": "index.ts",
+  "resolutions": {
+    "react": "18.3.1"
+  },
   "scripts": {
-    "start": "expo start",
+    "start": "./node_modules/.bin/expo start",
     "start:clear": "./node_modules/.bin/expo start --clear",
     "android": "expo start --android",
     "ios": "expo start --ios",
@@ -32,8 +35,8 @@
     "expo-splash-screen": "~31.0.13",
     "expo-sqlite": "~16.0.10",
     "expo-status-bar": "~3.0.9",
-    "react": "19.1.0",
-    "react-native": "0.81.5",
+    "react": "18.3.1",
+    "react-native": "0.76.9",
     "react-native-chart-kit": "^6.12.0",
     "react-native-dotenv": "^3.4.11",
     "react-native-pager-view": "6.9.1",

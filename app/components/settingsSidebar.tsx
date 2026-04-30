@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -16,6 +16,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useSettings } from '../context/settingsContext';
 import { ModuleType } from '../types/receipt';
 import { useAuth } from '../context/authContext';
+import { supabase } from '../services/supabaseClient';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
 const SIDEBAR_WIDTH = SCREEN_WIDTH * 0.82;
@@ -37,14 +38,16 @@ interface SettingsSidebarProps {
   visible: boolean;
   onClose: () => void;
   onReplayOnboarding: () => void;
+  onViewProfile: () => void;
 }
 
 export default function SettingsSidebar({
   visible,
   onClose,
   onReplayOnboarding,
+  onViewProfile,
 }: SettingsSidebarProps) {
-  const { signOut } = useAuth();
+  const { signOut, user } = useAuth();
   const {
     darkMode, setDarkMode,
     defaultModule, setDefaultModule,
@@ -53,6 +56,20 @@ export default function SettingsSidebar({
   } = useSettings();
 
   const slideAnim = React.useRef(new Animated.Value(SIDEBAR_WIDTH)).current;
+  const [profile, setProfile] = useState<any>(null);
+
+  useEffect(() => {
+    if (user) {
+      supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', user.id)
+        .single()
+        .then(({ data }) => {
+          if (data) setProfile(data);
+        });
+    }
+  }, [user]);
 
   React.useEffect(() => {
     if (visible) {
@@ -127,7 +144,14 @@ export default function SettingsSidebar({
             </View>
 
             {/* Profile */}
-            <TouchableOpacity style={[styles.card, { backgroundColor: cardBg }]}>
+            <TouchableOpacity 
+              style={[styles.card, { backgroundColor: cardBg }]}
+              onPress={() => {
+                console.log('Profile card pressed!');
+                onClose();
+                setTimeout(() => onViewProfile(), 500);
+              }}
+            >
               <View style={styles.profileAvatar}>
                 <Text style={styles.profileAvatarText}>👤</Text>
               </View>
