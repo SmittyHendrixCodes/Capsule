@@ -100,7 +100,6 @@ export default function SettingsSidebar({
   const subtextColor = 'rgba(255,255,255,0.6)';
 
   const handleReplayOnboarding = async () => {
-    console.log('Replay onboarding triggered!');
     await AsyncStorage.removeItem('onboarding_complete');
     onClose();
     setTimeout(() => onReplayOnboarding(), 300);
@@ -150,7 +149,7 @@ export default function SettingsSidebar({
               <TouchableOpacity 
                 style={[styles.card, { backgroundColor: cardBg }]}
                 onPress={() => {
-                  console.log('Profile card pressed!');
+
                   onClose();
                   setTimeout(() => onViewProfile(), 500);
                 }}

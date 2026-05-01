@@ -32,6 +32,7 @@ export default function FeedbackModal({ visible, onClose }: FeedbackModalProps) 
     const stars = '⭐'.repeat(rating);
     const subject = `Capsule Feedback — ${stars} (${rating}/5)`;
     const body = `Rating: ${rating}/5 stars\n\nFeedback:\n${feedback || 'No additional comments.'}`;
+    // UPDATE EMAIL //
     const email = 'feedback@capsuleapp.com';
 
     const mailtoUrl = `mailto:${email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;

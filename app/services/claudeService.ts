@@ -110,10 +110,7 @@ export const analyzeReceipt = async (base64Image: string): Promise<ReceiptData> 
     const cleaned = content.replace(/```json|```/g, '').trim();
     return JSON.parse(cleaned) as ReceiptData;
   } catch (error: any) {
-    console.log('Status:', error?.response?.status);
-    console.log('Error data:', JSON.stringify(error?.response?.data));
-    console.log('API Key exists:', !!ANTHROPIC_API_KEY);
-    console.log('API Key prefix:', ANTHROPIC_API_KEY?.substring(0, 10));
+
     throw error;
   }
 };

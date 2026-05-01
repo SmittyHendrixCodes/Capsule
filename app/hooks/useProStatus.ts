@@ -32,7 +32,11 @@ export const useProStatus = () => {
   };
 
   const checkExportCount = async () => {
-    if (!user) return;
+    if (!user) {
+      setExportCount(0);
+      return;
+    }
+    
     const startOfMonth = new Date();
     startOfMonth.setDate(1);
     startOfMonth.setHours(0, 0, 0, 0);

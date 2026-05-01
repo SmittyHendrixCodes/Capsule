@@ -134,12 +134,16 @@ const ReceiptModal = ({
   onClose,
   onEdit,
   theme,
+  canEditReceipt,
+  onShowProPrompt,
 }: {
   receipt: Receipt | null;
   visible: boolean;
   onClose: () => void;
   onEdit: (receipt: Receipt) => void;
   theme: any,
+  canEditReceipt: boolean;
+  onShowProPrompt: () => void;
 }) => {
   if (!receipt) return null;
 
@@ -274,7 +278,7 @@ const ReceiptModal = ({
             <TouchableOpacity
               onPress={() => {
                 if (!canEditReceipt) {
-                  setShowProPrompt(true);
+                  onShowProPrompt();
                   return;
                 }
                 onClose();
@@ -383,6 +387,12 @@ export default function LedgerScreen() {
   const [showProPrompt, setShowProPrompt] = useState(false);
   const { getFilteredReceipts, isPro } = useProStatus();
   const displayReceipts = getFilteredReceipts(receipts);
+
+    useFocusEffect(
+      useCallback(() => {
+        loadReceipts();
+      }, [])
+    );
 
   const filteredReceipts = displayReceipts.filter((r) => {
     const searchLower = search.toLowerCase();
@@ -665,6 +675,8 @@ export default function LedgerScreen() {
           setShowEditModal(true);
         }}
         theme={theme}
+        canEditReceipt={canEditReceipt}
+        onShowProPrompt={() => setShowProPrompt(true)}
       />
 
       <Modal

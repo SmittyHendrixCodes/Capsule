@@ -56,7 +56,7 @@ export default function CaptureScreen() {
   const [showReviewSession, setShowReviewSession] = useState(false);
   const { darkMode } = useSettings();
   const theme = getTheme(darkMode);
-  const { canCapture, capturesRemaining, isPro } = useProStatus();
+  const { canCapture, capturesRemaining, isPro, canUseBatchUpload } = useProStatus();
   const [showProPrompt, setShowProPrompt] = useState(false);
 
   useFocusEffect(
@@ -335,7 +335,7 @@ export default function CaptureScreen() {
           </Text>
         )}
 
-        {sessionQueue.length > 0 && !modalVisible && (
+        {sessionQueue.length > 0 && !modalVisible && canUseBatchUpload && (
           <TouchableOpacity
             style={[styles.sessionIndicatorButton, { backgroundColor: theme.button }]}
             onPress={() => setShowReviewSession(true)}
@@ -491,7 +491,7 @@ export default function CaptureScreen() {
                     </TouchableOpacity>
                   )}
 
-                  {saved && sessionQueue.length > 1 && (
+                  {saved && sessionQueue.length > 1 && canUseBatchUpload && (
                     <TouchableOpacity
                       style={styles.reviewSessionButton}
                       onPress={() => {

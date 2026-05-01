@@ -19,6 +19,8 @@ import { useSettings } from '../context/settingsContext';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { getTheme } from '../context/theme';
 import OnboardingOverlay from '../components/onboardingOverlay';
+import ProPromptModal from '../components/proPromptModal';
+import { useProStatus } from '../hooks/useProStatus';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
 
@@ -41,9 +43,10 @@ export default function HomeScreen() {
   const [greeting, setGreeting] = useState('');
   const [showSettings, setShowSettings] = useState(false);
   const [showOnboarding, setShowOnboarding] = useState(false);
-  const [currentScreen, setCurrentScreen] = useState<'Home' | 'Capture' | 'Ledger'>('Home');
   const { darkMode } = useSettings();
   const theme = getTheme(darkMode);
+  const { canViewAllCharts, isPro } = useProStatus();
+  const [showProPrompt, setShowProPrompt] = useState(false);
 
   useFocusEffect(
     useCallback(() => {
@@ -153,7 +156,8 @@ export default function HomeScreen() {
   };
 
   return (
-    <View>
+    <View style={[styles.container, { backgroundColor: theme.background }]}>
+
     <ScrollView
       style={[styles.container, { backgroundColor: theme.background }]}
       contentContainerStyle={styles.content}
@@ -231,7 +235,7 @@ export default function HomeScreen() {
       )}
 
       {/* Pie Chart */}
-      {pieData.length > 0 && (
+      {pieData.length > 0 && canViewAllCharts && (
         <View style={styles.section}>
           <Text style={[styles.sectionTitle, { color: theme.text }]}>🥧 Spend by Category</Text>
           <View style={[styles.chartCard, { backgroundColor: theme.card }]}>
@@ -250,7 +254,7 @@ export default function HomeScreen() {
       )}
 
       {/* Card Spend Breakdown */}
-      {Object.keys(cardCount).length > 0 && (
+      {Object.keys(cardCount).length > 0 && canViewAllCharts && (
         <View style={styles.section}>
           <Text style={[styles.sectionTitle, { color: theme.text }]}>💳 Card Breakdown</Text>
           <View style={[styles.cardBreakdown, { backgroundColor: theme.card }]}>
@@ -264,6 +268,17 @@ export default function HomeScreen() {
             ))}
           </View>
         </View>
+      )}
+
+      {!isPro && (
+        <TouchableOpacity
+          style={[styles.upgradePrompt, { backgroundColor: theme.card }]}
+          onPress={() => setShowProPrompt(true)}
+        >
+          <Text style={[styles.upgradePromptText, { color: theme.text }]}>
+            💰 Upgrade to Pro for spending insights & category breakdowns →
+          </Text>
+        </TouchableOpacity>
       )}
 
       {/* Recent Receipts */}
@@ -320,9 +335,14 @@ export default function HomeScreen() {
         onClose={() => setShowSettings(false)}
         onReplayOnboarding={() => setShowOnboarding(true)}
         onViewProfile={() => {
-          console.log('onViewProfile called!');
           navigation.navigate('Profile');
         }}
+      />
+      <ProPromptModal
+        visible={showProPrompt}
+        onClose={() => setShowProPrompt(false)}
+        feature="Advanced Analytics"
+        description="Unlock category breakdowns, card spending analysis and more with Pro."
       />
     </View>
   );
@@ -585,5 +605,17 @@ const styles = StyleSheet.create({
   },
   gearIcon: {
     fontSize: 20,
+  },
+  upgradePrompt: {
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 8,
+    alignItems: 'center' as const,
+  },
+  upgradePromptText: {
+    fontSize: 13,
+    fontFamily: 'Poppins_600SemiBold',
+    textAlign: 'center' as const,
+    lineHeight: 20,
   },
 });

@@ -97,7 +97,6 @@ export default function OnboardingOverlay({
   onNavigate,
   onComplete,
 }: OnboardingOverlayProps) {
-  console.log('OnboardingOverlay MOUNTED');
   const [stepIndex, setStepIndex] = useState(0);
   const [visible, setVisible] = useState(true);
   const fadeAnim = React.useRef(new Animated.Value(0)).current;
