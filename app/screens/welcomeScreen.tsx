@@ -10,6 +10,7 @@ import {
   Platform,
   ScrollView,
   Alert,
+  Image,
 } from 'react-native';
 import { useAuth } from '../context/authContext';
 import { supabase } from '../services/supabaseClient';
@@ -96,7 +97,11 @@ export default function WelcomeScreen({onAuthComplete}: WelcomeScreenProps) {
       >
         {/* Logo */}
         <View style={styles.logoSection}>
-          <Text style={styles.logo}>💊</Text>
+          <Image
+            source={require('../../assets/icon.png')}
+            style={styles.logoImage}
+            resizeMode="contain"
+          />
           <Text style={styles.appName}>Capsule</Text>
           <Text style={styles.tagline}>Your smart receipt companion</Text>
         </View>
@@ -428,5 +433,10 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontFamily: 'Poppins_600SemiBold',
     color: 'rgba(255,255,255,0.7)',
+  },
+  logoImage: {
+    width: 90,
+    height: 90,
+    marginBottom: 12,
   },
 });

@@ -1,48 +1,56 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Receipt } from '../types/receipt';
-import { initDatabase, saveReceipt, getReceipts, deleteReceipt, updateReceipt } from '../services/database';
+import { initDatabase } from '../services/database';
+import {
+  getReceipts,
+  addReceipt,
+  deleteReceipt,
+  updateReceipt,
+} from '../services/receiptService';
+import { useAuth } from '../context/authContext';
 
 export const useReceipts = () => {
   const [receipts, setReceipts] = useState<Receipt[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
+  const { user } = useAuth();
 
   useEffect(() => {
     setup();
   }, []);
 
   const setup = async () => {
-    await initDatabase();
-    await loadReceipts();
+    await initDatabase(); // still needed for SQLite (guest users)
+    await loadReceipts(); // now uses receiptService which picks SQLite or Supabase
   };
 
-  const loadReceipts = async () => {
+  const loadReceipts = useCallback(async () => {
     setLoading(true);
-    const data = await getReceipts();
+    const data = await getReceipts(user?.id);
     setReceipts(data);
-    setTimeout (() => setLoading(false), 500);
-  };
+    setTimeout(() => setLoading(false), 500);
+  }, [user?.id]);
 
-  const addReceipt = async (receipt: Receipt) => {
-    await saveReceipt(receipt);
+  const addReceiptItem = useCallback(async (receipt: Omit<Receipt, 'id'>) => {
+    await addReceipt(receipt, user?.id);
     await loadReceipts();
-  };
+  }, [user?.id, loadReceipts]);
 
-  const removeReceipt = async (id: number) => {
-    await deleteReceipt(id);
+  const removeReceipt = useCallback(async (id: number | string) => {
+    await deleteReceipt(id, user?.id);
     await loadReceipts();
-  };
+  }, [user?.id, loadReceipts]);
 
-  const editReceipt = async (receipt: Receipt) => {
-    await updateReceipt(receipt);
+  const editReceipt = useCallback(async (receipt: Receipt) => {
+    await updateReceipt(receipt, user?.id);
     await loadReceipts();
-  };
+  }, [user?.id, loadReceipts]);
 
   return {
     receipts,
     loading,
-    addReceipt,
-    removeReceipt,
     loadReceipts,
+    addReceipt: addReceiptItem,
+    removeReceipt,
     editReceipt,
   };
 };

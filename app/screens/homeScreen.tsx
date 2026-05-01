@@ -95,9 +95,16 @@ export default function HomeScreen() {
       .reduce((sum, r) => sum + r.total, 0)
   );
 
+  const maxSpend = Math.max(...monthlySpend, 1);
+  const yAxisMax = Math.ceil(maxSpend * 1.25);
+
   const lineData = {
     labels: last6Months.map((m) => m.substring(5)),
-    datasets: [{ data: monthlySpend.map((v) => (v === 0 ? 0.01 : v)) }],
+    datasets: [{ 
+      data: monthlySpend.map((v) => (v === 0 ? 0.01 : v)),
+      withDots: true,
+    }],
+    legend: [],
   };
 
   // ── Pie Chart Data ─────────────────────────────────────
@@ -139,6 +146,10 @@ export default function HomeScreen() {
       strokeWidth: '2',
       stroke: theme.text,
     },
+    // This controls the y-axis scale
+    count: 4,
+    min: 0,
+    max: yAxisMax,
   };
 
   return (
@@ -210,6 +221,10 @@ export default function HomeScreen() {
               style={styles.chart}
               withInnerLines={false}
               withOuterLines={false}
+              fromZero={true}
+              yAxisLabel="$"
+              yLabelsOffset={8}
+              segments={4}
             />
           </View>
         </View>

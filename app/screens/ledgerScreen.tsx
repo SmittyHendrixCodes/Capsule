@@ -26,6 +26,8 @@ import ExportSummaryModal from '../components/exportSummaryModal';
 import EditReceiptScreen from '../screens/editReceiptScreen';
 import { getTheme } from '../context/theme';
 import { useSettings } from '../context/settingsContext';
+import { useProStatus } from '../hooks/useProStatus';
+import ProPromptModal from '../components/proPromptModal';
 
 const MODULE_EMOJI: Record<string, string> = {
   work: '💼',
@@ -271,6 +273,10 @@ const ReceiptModal = ({
           <Text style={[styles.modalTitle, { color: theme.text }]}>{receipt.merchant}</Text>
             <TouchableOpacity
               onPress={() => {
+                if (!canEditReceipt) {
+                  setShowProPrompt(true);
+                  return;
+                }
                 onClose();
                 onEdit(receipt);
               }}
@@ -373,8 +379,12 @@ export default function LedgerScreen() {
   const [exportReceipts, setExportReceipts] = useState<Receipt[]>([]);
   const [editingReceipt, setEditingReceipt] = useState<Receipt | null>(null);
   const [showEditModal, setShowEditModal] = useState(false);
+  const { canEditReceipt } = useProStatus();
+  const [showProPrompt, setShowProPrompt] = useState(false);
+  const { getFilteredReceipts, isPro } = useProStatus();
+  const displayReceipts = getFilteredReceipts(receipts);
 
-  const filteredReceipts = receipts.filter((r) => {
+  const filteredReceipts = displayReceipts.filter((r) => {
     const searchLower = search.toLowerCase();
     const matchesSearch =
       search === '' ||
@@ -561,14 +571,25 @@ export default function LedgerScreen() {
         </View>
       </View>
 
+      {!isPro && (
+        <TouchableOpacity
+          style={[styles.historyBanner, { backgroundColor: theme.card }]}
+          onPress={() => setShowProPrompt(true)}
+        >
+          <Text style={[styles.historyBannerText, { color: theme.subtext }]}>
+            📅 Showing last 14 days · Upgrade for full history
+          </Text>
+        </TouchableOpacity>
+      )}
+
       {filteredReceipts.length === 0 ? (
         <View style={styles.empty}>
           <Text style={styles.emptyEmoji}>🧾</Text>
           <Text style={[styles.emptyText, { color: theme.text }]}>
-            {receipts.length === 0 ? 'No receipts yet' : 'No results found'}
+            {displayReceipts.length === 0 ? 'No receipts yet' : 'No results found'}
           </Text>
           <Text style={[styles.emptySubtext, { color: theme.text }]}>
-            {receipts.length === 0
+            {displayReceipts.length === 0
               ? 'Capture your first receipt to get started'
               : 'Try adjusting your search or filters'}
           </Text>
@@ -615,6 +636,10 @@ export default function LedgerScreen() {
                     );
                   } : handlePress}
                   onLongPress={(receipt) => {
+                    if (!canEditReceipt) {
+                      setShowProPrompt(true);
+                      return;
+                    }
                     setEditingReceipt(receipt);
                     setShowEditModal(true);
                   }}
@@ -794,7 +819,12 @@ export default function LedgerScreen() {
           }}
         />
       )}
-
+      <ProPromptModal
+        visible={showProPrompt}
+        onClose={() => setShowProPrompt(false)}
+        feature="Edit Receipts"
+        description="Editing receipts is a Pro feature. Upgrade to fix merchant names, dates, totals and more."
+      />
     </View>
   );
 }
@@ -1349,5 +1379,16 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontFamily: 'Poppins_600SemiBold',
     color: '#1C1C1E',
+  },
+  historyBanner: {
+    marginHorizontal: 16,
+    marginBottom: 8,
+    borderRadius: 10,
+    padding: 10,
+    alignItems: 'center',
+  },
+  historyBannerText: {
+    fontSize: 12,
+    fontFamily: 'Poppins_400Regular',
   },
 });

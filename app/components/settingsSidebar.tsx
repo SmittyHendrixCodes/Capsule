@@ -17,6 +17,8 @@ import { useSettings } from '../context/settingsContext';
 import { ModuleType } from '../types/receipt';
 import { useAuth } from '../context/authContext';
 import { supabase } from '../services/supabaseClient';
+import FeedbackModal from './feedbackModal';
+import { useProStatus } from '../hooks/useProStatus';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
 const SIDEBAR_WIDTH = SCREEN_WIDTH * 0.82;
@@ -57,6 +59,10 @@ export default function SettingsSidebar({
 
   const slideAnim = React.useRef(new Animated.Value(SIDEBAR_WIDTH)).current;
   const [profile, setProfile] = useState<any>(null);
+
+  const [showFeedback, setShowFeedback] = useState(false);
+  const { canUseDarkMode } = useProStatus();
+  const [showProPrompt, setShowProPrompt] = useState(false);
 
   useEffect(() => {
     if (user) {
@@ -104,10 +110,6 @@ export default function SettingsSidebar({
     Alert.alert('Rate Capsule', 'This will open the App Store when published!');
   };
 
-  const handleFeedback = () => {
-    Linking.openURL('mailto:feedback@capsuleapp.com?subject=Capsule Feedback');
-  };
-
   const handlePrivacyPolicy = () => {
     Alert.alert('Privacy Policy', 'Privacy policy will be available when published.');
   };
@@ -117,200 +119,215 @@ export default function SettingsSidebar({
   };
 
   return (
-    <Modal
-      visible={visible}
-      transparent
-      animationType="none"
-      onRequestClose={onClose}
-    >
-      <View style={styles.overlay}>
-        <TouchableOpacity style={styles.backdrop} onPress={onClose} />
-        <Animated.View
-          style={[
-            styles.sidebar,
-            { backgroundColor: bg, transform: [{ translateX: slideAnim }] },
-          ]}
-        >
-          <ScrollView
-            contentContainerStyle={styles.content}
-            showsVerticalScrollIndicator={false}
+    <>
+      <Modal
+        visible={visible}
+        transparent
+        animationType="none"
+        onRequestClose={onClose}
+      >
+        <View style={styles.overlay}>
+          <TouchableOpacity style={styles.backdrop} onPress={onClose} />
+          <Animated.View
+            style={[
+              styles.sidebar,
+              { backgroundColor: bg, transform: [{ translateX: slideAnim }] },
+            ]}
           >
-            {/* Header */}
-            <View style={styles.header}>
-              <Text style={[styles.headerTitle, { color: textColor }]}>Settings</Text>
-              <TouchableOpacity onPress={onClose} style={styles.closeButton}>
-                <Text style={styles.closeText}>✕</Text>
-              </TouchableOpacity>
-            </View>
-
-            {/* Profile */}
-            <TouchableOpacity 
-              style={[styles.card, { backgroundColor: cardBg }]}
-              onPress={() => {
-                console.log('Profile card pressed!');
-                onClose();
-                setTimeout(() => onViewProfile(), 500);
-              }}
+            <ScrollView
+              contentContainerStyle={styles.content}
+              showsVerticalScrollIndicator={false}
             >
-              <View style={styles.profileAvatar}>
-                <Text style={styles.profileAvatarText}>👤</Text>
+              {/* Header */}
+              <View style={styles.header}>
+                <Text style={[styles.headerTitle, { color: textColor }]}>Settings</Text>
+                <TouchableOpacity onPress={onClose} style={styles.closeButton}>
+                  <Text style={styles.closeText}>✕</Text>
+                </TouchableOpacity>
               </View>
-              <View style={styles.profileInfo}>
-                <Text style={[styles.profileName, { color: textColor }]}>Your Profile</Text>
-                <Text style={[styles.profileSub, { color: subtextColor }]}>Coming with accounts</Text>
-              </View>
-              <Text style={[styles.arrow, { color: subtextColor }]}>→</Text>
-            </TouchableOpacity>
 
-            {/* Default Export Format */}
-            <View style={[styles.card, { backgroundColor: cardBg }]}>
-              <Text style={[styles.cardTitle, { color: textColor }]}>📄 Default Export Format</Text>
-              <View style={styles.optionRow}>
-                {EXPORT_OPTIONS.map((opt) => (
-                  <TouchableOpacity
-                    key={opt.value}
-                    style={[
-                      styles.optionChip,
-                      defaultExportFormat === opt.value && styles.optionChipActive,
-                    ]}
-                    onPress={() => setDefaultExportFormat(opt.value as 'csv' | 'xml' | 'pdf')}
-                  >
-                    <Text style={styles.optionChipEmoji}>{opt.emoji}</Text>
-                    <Text style={[
-                      styles.optionChipText,
-                      defaultExportFormat === opt.value && styles.optionChipTextActive,
-                    ]}>
-                      {opt.label}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-            </View>
-
-            {/* Default Module */}
-            <View style={[styles.card, { backgroundColor: cardBg }]}>
-              <Text style={[styles.cardTitle, { color: textColor }]}>📁 Default Module</Text>
-              <View style={styles.moduleGrid}>
-                {MODULE_OPTIONS.map((mod) => (
-                  <TouchableOpacity
-                    key={mod.value}
-                    style={[
-                      styles.moduleChip,
-                      defaultModule === mod.value && styles.moduleChipActive,
-                    ]}
-                    onPress={() => setDefaultModule(mod.value)}
-                  >
-                    <Text style={styles.moduleChipEmoji}>{mod.emoji}</Text>
-                    <Text style={[
-                      styles.moduleChipText,
-                      defaultModule === mod.value && styles.moduleChipTextActive,
-                    ]}>
-                      {mod.label}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-            </View>
-
-            {/* Toggles */}
-            <View style={[styles.card, { backgroundColor: cardBg }]}>
-              <View style={styles.toggleRow}>
-                <View>
-                  <Text style={[styles.toggleLabel, { color: textColor }]}>🔔 Notifications</Text>
-                  <Text style={[styles.toggleSub, { color: subtextColor }]}>Weekly digest reminders</Text>
+              {/* Profile */}
+              <TouchableOpacity 
+                style={[styles.card, { backgroundColor: cardBg }]}
+                onPress={() => {
+                  console.log('Profile card pressed!');
+                  onClose();
+                  setTimeout(() => onViewProfile(), 500);
+                }}
+              >
+                <View style={styles.profileAvatar}>
+                  <Text style={styles.profileAvatarText}>👤</Text>
                 </View>
-                <Switch
-                  value={notificationsEnabled}
-                  onValueChange={setNotificationsEnabled}
-                  trackColor={{ false: 'rgba(255,255,255,0.2)', true: '#DDDDDD' }}
-                  thumbColor={notificationsEnabled ? '#1C1C1E' : '#fff'}
-                />
-              </View>
-
-              <View style={[styles.divider, { backgroundColor: 'rgba(255,255,255,0.1)' }]} />
-
-              <View style={styles.toggleRow}>
-                <View>
-                  <Text style={[styles.toggleLabel, { color: textColor }]}>🌙 Dark Mode</Text>
-                  <Text style={[styles.toggleSub, { color: subtextColor }]}>Switch app appearance</Text>
+                <View style={styles.profileInfo}>
+                  <Text style={[styles.profileName, { color: textColor }]}>Your Profile</Text>
+                  <Text style={[styles.profileSub, { color: subtextColor }]}>Coming with accounts</Text>
                 </View>
-                <Switch
-                  value={darkMode}
-                  onValueChange={setDarkMode}
-                  trackColor={{ false: 'rgba(255,255,255,0.2)', true: '#DDDDDD' }}
-                  thumbColor={darkMode ? '#1C1C1E' : '#fff'}
-                />
-              </View>
-            </View>
-
-            {/* Actions */}
-            <View style={[styles.card, { backgroundColor: cardBg }]}>
-              <TouchableOpacity style={styles.actionRow} onPress={handleReplayOnboarding}>
-                <Text style={[styles.actionText, { color: textColor }]}>🎓 Tutorial</Text>
                 <Text style={[styles.arrow, { color: subtextColor }]}>→</Text>
               </TouchableOpacity>
 
-              <View style={[styles.divider, { backgroundColor: 'rgba(255,255,255,0.1)' }]} />
+              {/* Default Export Format */}
+              <View style={[styles.card, { backgroundColor: cardBg }]}>
+                <Text style={[styles.cardTitle, { color: textColor }]}>📄 Default Export Format</Text>
+                <View style={styles.optionRow}>
+                  {EXPORT_OPTIONS.map((opt) => (
+                    <TouchableOpacity
+                      key={opt.value}
+                      style={[
+                        styles.optionChip,
+                        defaultExportFormat === opt.value && styles.optionChipActive,
+                      ]}
+                      onPress={() => setDefaultExportFormat(opt.value as 'csv' | 'xml' | 'pdf')}
+                    >
+                      <Text style={styles.optionChipEmoji}>{opt.emoji}</Text>
+                      <Text style={[
+                        styles.optionChipText,
+                        defaultExportFormat === opt.value && styles.optionChipTextActive,
+                      ]}>
+                        {opt.label}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </View>
 
-              <TouchableOpacity style={styles.actionRow} onPress={handleRateApp}>
-                <Text style={[styles.actionText, { color: textColor }]}>⭐ Rate the App</Text>
-                <Text style={[styles.arrow, { color: subtextColor }]}>→</Text>
+              {/* Default Module */}
+              <View style={[styles.card, { backgroundColor: cardBg }]}>
+                <Text style={[styles.cardTitle, { color: textColor }]}>📁 Default Module</Text>
+                <View style={styles.moduleGrid}>
+                  {MODULE_OPTIONS.map((mod) => (
+                    <TouchableOpacity
+                      key={mod.value}
+                      style={[
+                        styles.moduleChip,
+                        defaultModule === mod.value && styles.moduleChipActive,
+                      ]}
+                      onPress={() => setDefaultModule(mod.value)}
+                    >
+                      <Text style={styles.moduleChipEmoji}>{mod.emoji}</Text>
+                      <Text style={[
+                        styles.moduleChipText,
+                        defaultModule === mod.value && styles.moduleChipTextActive,
+                      ]}>
+                        {mod.label}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </View>
+
+              {/* Toggles */}
+              <View style={[styles.card, { backgroundColor: cardBg }]}>
+                <View style={styles.toggleRow}>
+                  <View>
+                    <Text style={[styles.toggleLabel, { color: textColor }]}>🔔 Notifications</Text>
+                    <Text style={[styles.toggleSub, { color: subtextColor }]}>Weekly digest reminders</Text>
+                  </View>
+                  <Switch
+                    value={notificationsEnabled}
+                    onValueChange={setNotificationsEnabled}
+                    trackColor={{ false: 'rgba(255,255,255,0.2)', true: '#DDDDDD' }}
+                    thumbColor={notificationsEnabled ? '#1C1C1E' : '#fff'}
+                  />
+                </View>
+
+                <View style={[styles.divider, { backgroundColor: 'rgba(255,255,255,0.1)' }]} />
+
+                <View style={styles.toggleRow}>
+                  <View>
+                    <Text style={[styles.toggleLabel, { color: textColor }]}>🌙 Dark Mode</Text>
+                    <Text style={[styles.toggleSub, { color: subtextColor }]}>
+                      {canUseDarkMode ? 'Switch app appearance' : '🔒 Pro feature'}
+                    </Text>
+                  </View>
+                  <Switch
+                    value={canUseDarkMode ? darkMode : false}
+                    onValueChange={(val) => {
+                      if (!canUseDarkMode) {
+                        setShowProPrompt(true);
+                        return;
+                      }
+                      setDarkMode(val);
+                    }}
+                    trackColor={{ false: 'rgba(255,255,255,0.2)', true: '#DDDDDD' }}
+                    thumbColor={darkMode ? '#1C1C1E' : '#fff'}
+                    disabled={!canUseDarkMode}
+                  />
+                </View>
+              </View>
+
+              {/* Actions */}
+              <View style={[styles.card, { backgroundColor: cardBg }]}>
+                <TouchableOpacity style={styles.actionRow} onPress={handleReplayOnboarding}>
+                  <Text style={[styles.actionText, { color: textColor }]}>🎓 Tutorial</Text>
+                  <Text style={[styles.arrow, { color: subtextColor }]}>→</Text>
+                </TouchableOpacity>
+
+                <View style={[styles.divider, { backgroundColor: 'rgba(255,255,255,0.1)' }]} />
+
+                <TouchableOpacity style={styles.actionRow} onPress={handleRateApp}>
+                  <Text style={[styles.actionText, { color: textColor }]}>⭐ Rate the App</Text>
+                  <Text style={[styles.arrow, { color: subtextColor }]}>→</Text>
+                </TouchableOpacity>
+
+                <View style={[styles.divider, { backgroundColor: 'rgba(255,255,255,0.1)' }]} />
+
+                <TouchableOpacity style={styles.actionRow} onPress={() => setShowFeedback(true)}>
+                  <Text style={[styles.actionText, { color: textColor }]}>📬 Send Feedback</Text>
+                  <Text style={[styles.arrow, { color: subtextColor }]}>→</Text>
+                </TouchableOpacity>
+
+                <View style={[styles.divider, { backgroundColor: 'rgba(255,255,255,0.1)' }]} />
+
+                <TouchableOpacity style={styles.actionRow} onPress={handlePrivacyPolicy}>
+                  <Text style={[styles.actionText, { color: textColor }]}>🔒 Privacy Policy</Text>
+                  <Text style={[styles.arrow, { color: subtextColor }]}>→</Text>
+                </TouchableOpacity>
+              </View>
+
+              {/* App Version */}
+              <View style={[styles.card, { backgroundColor: cardBg }]}>
+                <View style={styles.actionRow}>
+                  <Text style={[styles.actionText, { color: textColor }]}>ℹ️ App Version</Text>
+                  <Text style={[styles.versionText, { color: subtextColor }]}>1.0.0</Text>
+                </View>
+              </View>
+
+              {/* Sign Out */}
+              <TouchableOpacity
+                style={[styles.card, { backgroundColor: cardBg }]}
+                onPress={async () => {
+                  await signOut();
+                  onClose();
+                }}
+              >
+                <View style={styles.actionRow}>
+                  <Text style={[styles.actionText, { color: '#EF4444' }]}>🚪 Sign Out</Text>
+                  <Text style={[styles.arrow, { color: '#EF4444' }]}>→</Text>
+                </View>
               </TouchableOpacity>
 
-              <View style={[styles.divider, { backgroundColor: 'rgba(255,255,255,0.1)' }]} />
-
-              <TouchableOpacity style={styles.actionRow} onPress={handleFeedback}>
-                <Text style={[styles.actionText, { color: textColor }]}>📬 Send Feedback</Text>
-                <Text style={[styles.arrow, { color: subtextColor }]}>→</Text>
+              {/* Upgrade to Pro */}
+              <TouchableOpacity
+                style={styles.proButton}
+                onPress={handleUpgradePro}
+              >
+                <Text style={styles.proEmoji}>💰</Text>
+                <View>
+                  <Text style={styles.proTitle}>Upgrade to Pro</Text>
+                  <Text style={styles.proSub}>Budget tracking, AI insights & more</Text>
+                </View>
+                <Text style={styles.proArrow}>→</Text>
               </TouchableOpacity>
 
-              <View style={[styles.divider, { backgroundColor: 'rgba(255,255,255,0.1)' }]} />
-
-              <TouchableOpacity style={styles.actionRow} onPress={handlePrivacyPolicy}>
-                <Text style={[styles.actionText, { color: textColor }]}>🔒 Privacy Policy</Text>
-                <Text style={[styles.arrow, { color: subtextColor }]}>→</Text>
-              </TouchableOpacity>
-            </View>
-
-            {/* App Version */}
-            <View style={[styles.card, { backgroundColor: cardBg }]}>
-              <View style={styles.actionRow}>
-                <Text style={[styles.actionText, { color: textColor }]}>ℹ️ App Version</Text>
-                <Text style={[styles.versionText, { color: subtextColor }]}>1.0.0</Text>
-              </View>
-            </View>
-
-            {/* Sign Out */}
-            <TouchableOpacity
-              style={[styles.card, { backgroundColor: cardBg }]}
-              onPress={async () => {
-                await signOut();
-                onClose();
-              }}
-            >
-              <View style={styles.actionRow}>
-                <Text style={[styles.actionText, { color: '#EF4444' }]}>🚪 Sign Out</Text>
-                <Text style={[styles.arrow, { color: '#EF4444' }]}>→</Text>
-              </View>
-            </TouchableOpacity>
-
-            {/* Upgrade to Pro */}
-            <TouchableOpacity
-              style={styles.proButton}
-              onPress={handleUpgradePro}
-            >
-              <Text style={styles.proEmoji}>💰</Text>
-              <View>
-                <Text style={styles.proTitle}>Upgrade to Pro</Text>
-                <Text style={styles.proSub}>Budget tracking, AI insights & more</Text>
-              </View>
-              <Text style={styles.proArrow}>→</Text>
-            </TouchableOpacity>
-
-          </ScrollView>
-        </Animated.View>
-      </View>
-    </Modal>
+            </ScrollView>
+          </Animated.View>
+        </View>
+      </Modal>
+      <FeedbackModal
+        visible={showFeedback}
+        onClose={() => setShowFeedback(false)}
+      />
+    </>
   );
 }
 

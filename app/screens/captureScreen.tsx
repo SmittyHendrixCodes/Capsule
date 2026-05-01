@@ -23,6 +23,8 @@ import ReviewSessionScreen, { QueuedReceipt } from './reviewSessionScreen';
 import { getTheme } from '../context/theme';
 import { useSettings } from '../context/settingsContext';
 import { scheduleSessionReminder, cancelSessionReminder } from '../services/notificationService';
+import { useProStatus } from '../hooks/useProStatus';
+import ProPromptModal from '../components/proPromptModal';
 
 const SCREEN_HEIGHT = Dimensions.get('window').height;
 
@@ -54,6 +56,8 @@ export default function CaptureScreen() {
   const [showReviewSession, setShowReviewSession] = useState(false);
   const { darkMode } = useSettings();
   const theme = getTheme(darkMode);
+  const { canCapture, capturesRemaining, isPro } = useProStatus();
+  const [showProPrompt, setShowProPrompt] = useState(false);
 
   useFocusEffect(
     useCallback(() => {
@@ -150,6 +154,10 @@ export default function CaptureScreen() {
   };
 
   const takePicture = async () => {
+    if (!canCapture) {
+      setShowProPrompt(true);
+      return;
+    }
     if (!cameraRef.current) return;
     try {
       const photo = await cameraRef.current.takePictureAsync({
@@ -166,6 +174,10 @@ export default function CaptureScreen() {
   };
 
   const pickFromGallery = async () => {
+    if (!canCapture) {
+      setShowProPrompt(true);
+      return;
+    }
     const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (!perm.granted) {
       Alert.alert('Permission needed', 'Please allow access to your photo library.');
@@ -316,6 +328,12 @@ export default function CaptureScreen() {
         <TouchableOpacity style={[styles.galleryButton, { backgroundColor: theme.card }]} onPress={pickFromGallery}>
           <Text style={[styles.galleryButtonText, { color: theme.button }]}>🖼 Choose from Gallery</Text>
         </TouchableOpacity>
+
+        {!isPro && (
+          <Text style={[styles.captureLimit, { color: theme.subtext }]}>
+            {capturesRemaining} free captures remaining this month
+          </Text>
+        )}
 
         {sessionQueue.length > 0 && !modalVisible && (
           <TouchableOpacity
@@ -502,6 +520,12 @@ export default function CaptureScreen() {
           onDelete={handleSessionDelete}
         />
       )}
+      <ProPromptModal
+        visible={showProPrompt}
+        onClose={() => setShowProPrompt(false)}
+        feature="Unlimited Captures"
+        description="You've reached your free capture limit for this month. Upgrade to Pro for unlimited receipt captures."
+      />
     </View>
   );
 }
@@ -923,5 +947,11 @@ const styles = StyleSheet.create({
     color: '#DDDDDD',
     fontSize: 15,
     fontFamily: 'Poppins_600SemiBold',
+  },
+  captureLimit: {
+    fontSize: 12,
+    fontFamily: 'Poppins_400Regular',
+    textAlign: 'center',
+    marginTop: 8,
   },
 });
