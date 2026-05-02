@@ -28,6 +28,9 @@ import { getTheme } from '../context/theme';
 import { useSettings } from '../context/settingsContext';
 import { useProStatus } from '../hooks/useProStatus';
 import ProPromptModal from '../components/proPromptModal';
+import GroupManagerModal from '../components/groupManagerModal';
+import { Group } from '../services/groupService';
+import { assignReceiptToGroup } from '../services/groupService';
 
 const MODULE_EMOJI: Record<string, string> = {
   work: '💼',
@@ -75,7 +78,7 @@ const ReceiptCard = ({
 
   useFocusEffect(
     useCallback(() => {
-      animate();
+    animate();
     }, [index])
   );
 
@@ -383,10 +386,11 @@ export default function LedgerScreen() {
   const [exportReceipts, setExportReceipts] = useState<Receipt[]>([]);
   const [editingReceipt, setEditingReceipt] = useState<Receipt | null>(null);
   const [showEditModal, setShowEditModal] = useState(false);
-  const { canEditReceipt } = useProStatus();
   const [showProPrompt, setShowProPrompt] = useState(false);
-  const { getFilteredReceipts, isPro } = useProStatus();
+  const { getFilteredReceipts, isPro, canEditReceipt } = useProStatus();
   const displayReceipts = getFilteredReceipts(receipts);
+  const [showGroupManager, setShowGroupManager] = useState(false);
+  const [selectedGroup, setSelectedGroup] = useState<Group | null>(null);
 
     useFocusEffect(
       useCallback(() => {
@@ -410,7 +414,8 @@ export default function LedgerScreen() {
       (r.cardLast4 || 'Cash / Not Available') === selectedCard;
     const matchesMonth =
       selectedMonth === 'all' || r.date.startsWith(selectedMonth);
-    return matchesSearch && matchesModule && matchesCategory && matchesCard && matchesMonth;
+    const matchesGroup = !selectedGroup || (r as any).group_id === selectedGroup.id;
+    return matchesSearch && matchesModule && matchesCategory && matchesCard && matchesMonth && matchesGroup;
   });
 
   const uniqueCategories = ['all', ...Array.from(new Set(receipts.map((r) => r.category)))];
@@ -487,6 +492,21 @@ export default function LedgerScreen() {
             {activeFilterCount > 0 ? `Filter (${activeFilterCount})` : 'Filter'}
           </Text>
         </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.groupButton, selectedGroup && styles.groupButtonActive]}
+            onPress={() => {
+              if (!isPro) {
+                setShowProPrompt(true);
+                return;
+              }
+              setShowGroupManager(true);
+            }}
+          >
+            <Text style={[styles.groupButtonText, selectedGroup && styles.groupButtonTextActive]}>
+              {selectedGroup ? '📁' : '📁 Groups'}
+            </Text>
+          </TouchableOpacity>
       </View>
 
       {activeFilterCount > 0 && (
@@ -568,7 +588,7 @@ export default function LedgerScreen() {
         <View style={styles.summaryDivider} />
         <View style={styles.summaryItem}>
           <Text style={styles.summaryValue}>
-            ${filteredReceipts.reduce((sum, r) => sum + r.total, 0).toFixed(2)}
+            ${filteredReceipts.reduce((sum, r) => sum + Number(r.total), 0).toFixed(2)}
           </Text>
           <Text style={styles.summaryLabel}>Total Spend</Text>
         </View>
@@ -687,7 +707,7 @@ export default function LedgerScreen() {
       >
         <View style={[styles.filterModalContainer, { backgroundColor: theme.background }]}>
           <View style={[styles.filterModalHeader, { backgroundColor: theme.card }]}>
-            <Text style={[styles.filterModalTitle, { color: theme.card }]}>Filter</Text>
+            <Text style={[styles.filterModalTitle, { color: theme.text }]}>Filter</Text>
             <TouchableOpacity
               onPress={() => setShowFilterModal(false)}
               style={styles.closeButton}
@@ -696,7 +716,7 @@ export default function LedgerScreen() {
             </TouchableOpacity>
           </View>
           <ScrollView contentContainerStyle={styles.filterModalContent}>
-            <Text style={[styles.filterSection, { color: theme.card }]}>Module</Text>
+            <Text style={[styles.filterSection, { color: theme.subtext }]}>Module</Text>
             <View style={styles.filterChipRow}>
               {['all', 'work', 'tax', 'personal', 'general'].map((mod) => (
                 <TouchableOpacity
@@ -711,7 +731,7 @@ export default function LedgerScreen() {
               ))}
             </View>
 
-            <Text style={[styles.filterSection, { color: theme.card }]}>Category</Text>
+            <Text style={[styles.filterSection, { color: theme.subtext }]}>Category</Text>
             <View style={styles.filterChipRow}>
               {uniqueCategories.map((cat) => (
                 <TouchableOpacity
@@ -726,7 +746,7 @@ export default function LedgerScreen() {
               ))}
             </View>
 
-            <Text style={[styles.filterSection, { color: theme.card }]}>Month</Text>
+            <Text style={[styles.filterSection, { color: theme.subtext }]}>Month</Text>
             <View style={styles.filterChipRow}>
               {uniqueMonths.map((month) => (
                 <TouchableOpacity
@@ -741,7 +761,7 @@ export default function LedgerScreen() {
               ))}
             </View>
 
-            <Text style={[styles.filterSection, { color: theme.card }]}>Card</Text>
+            <Text style={[styles.filterSection, { color: theme.subtext }]}>Card</Text>
             <View style={styles.filterChipRow}>
               {uniqueCards.map((card) => (
                 <TouchableOpacity
@@ -831,11 +851,17 @@ export default function LedgerScreen() {
           }}
         />
       )}
+      <GroupManagerModal
+        visible={showGroupManager}
+        onClose={() => setShowGroupManager(false)}
+        onSelectGroup={(group) => setSelectedGroup(group)}
+        selectedGroupId={selectedGroup?.id}
+      />
       <ProPromptModal
         visible={showProPrompt}
         onClose={() => setShowProPrompt(false)}
-        feature="Edit Receipts"
-        description="Editing receipts is a Pro feature. Upgrade to fix merchant names, dates, totals and more."
+        feature="Pro Feature"
+        description="Upgrade to Pro to unlock edit receipts, full history, groups and more."
       />
     </View>
   );
@@ -1402,5 +1428,22 @@ const styles = StyleSheet.create({
   historyBannerText: {
     fontSize: 12,
     fontFamily: 'Poppins_400Regular',
+  },
+  groupButton: {
+    backgroundColor: '#DDDDDD22',
+    borderRadius: 10,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+  },
+  groupButtonActive: {
+    backgroundColor: '#1C1C1E',
+  },
+  groupButtonText: {
+    fontSize: 13,
+    fontFamily: 'Poppins_600SemiBold',
+    color: '#1C1C1E',
+  },
+  groupButtonTextActive: {
+    color: '#DDDDDD',
   },
 });

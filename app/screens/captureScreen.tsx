@@ -25,6 +25,10 @@ import { useSettings } from '../context/settingsContext';
 import { scheduleSessionReminder, cancelSessionReminder } from '../services/notificationService';
 import { useProStatus } from '../hooks/useProStatus';
 import ProPromptModal from '../components/proPromptModal';
+import { Group, getGroups } from '../services/groupService';
+import { assignReceiptToGroup } from '../services/groupService';
+import { useAuth } from '../context/authContext';
+import { getReceipts } from '../services/receiptService';
 
 const SCREEN_HEIGHT = Dimensions.get('window').height;
 
@@ -58,6 +62,9 @@ export default function CaptureScreen() {
   const theme = getTheme(darkMode);
   const { canCapture, capturesRemaining, isPro, canUseBatchUpload } = useProStatus();
   const [showProPrompt, setShowProPrompt] = useState(false);
+  const [groups, setGroups] = useState<Group[]>([]);
+  const [selectedGroupId, setSelectedGroupId] = useState<string | null>(null);
+  const { user } = useAuth();
 
   useFocusEffect(
     useCallback(() => {
@@ -71,6 +78,12 @@ export default function CaptureScreen() {
       requestPermission();
     }
   }, []);
+
+  useEffect(() => {
+    if (modalVisible && user && isPro) {
+      getGroups(user.id).then(setGroups);
+    }
+  }, [modalVisible]);
 
   useEffect(() => {
     Animated.loop(
@@ -210,6 +223,16 @@ export default function CaptureScreen() {
         imageUri: image || undefined,
         cardLast4: receipt.cardLast4 || 'Cash / Not Available',
       });
+
+      // Assign to group if selected
+      if (selectedGroupId && isPro) {
+        const savedReceipts = await getReceipts(user?.id);
+        const latest = savedReceipts[0];
+        if (latest?.id) {
+          await assignReceiptToGroup(latest.id, selectedGroupId);
+        }
+      }
+
       setSaved(true);
       Alert.alert('Saved!', 'Receipt has been saved to your Capsule.');
     } catch (error) {
@@ -247,6 +270,7 @@ export default function CaptureScreen() {
     setDuplicate(null);
     setShowDuplicateWarning(false);
     setQualityIssue(null);
+    setSelectedGroupId(null);
   };
   
   if (!permission) {
@@ -470,6 +494,39 @@ export default function CaptureScreen() {
                     </View>
                   </View>
 
+                  {isPro && groups.length > 0 && (
+                    <View style={[styles.modalCard, { backgroundColor: theme.card }]}>
+                      <Text style={[styles.modalSectionTitle, { color: theme.text }]}>Add to Group (Optional)</Text>
+                      <View style={styles.groupRow}>
+                        <TouchableOpacity
+                          style={[
+                            styles.groupChip,
+                            !selectedGroupId && styles.groupChipActive,
+                          ]}
+                          onPress={() => setSelectedGroupId(null)}
+                        >
+                          <Text style={[styles.groupChipText, !selectedGroupId && styles.groupChipTextActive]}>
+                            None
+                          </Text>
+                        </TouchableOpacity>
+                        {groups.map(g => (
+                          <TouchableOpacity
+                            key={g.id}
+                            style={[
+                              styles.groupChip,
+                              selectedGroupId === g.id && styles.groupChipActive,
+                            ]}
+                            onPress={() => setSelectedGroupId(g.id)}
+                          >
+                            <Text style={[styles.groupChipText, selectedGroupId === g.id && styles.groupChipTextActive]}>
+                              📁 {g.name}
+                            </Text>
+                          </TouchableOpacity>
+                        ))}
+                      </View>
+                    </View>
+                  )}
+
                   <Animated.View style={{ transform: [{ scale: saveScale }] }}>
                     <TouchableOpacity
                       style={[styles.saveButton, saved && styles.saveButtonDone]}
@@ -482,14 +539,12 @@ export default function CaptureScreen() {
                     </TouchableOpacity>
                   </Animated.View>
 
-                  {receipt && (
                     <TouchableOpacity
                       style={[styles.captureAnotherButton, { backgroundColor: theme.cardInner }]}
                       onPress={handleCloseModal}
                     >
                       <Text style={[styles.captureAnotherText, { color: theme.button }]}>📷 Capture Another</Text>
                     </TouchableOpacity>
-                  )}
 
                   {saved && sessionQueue.length > 1 && canUseBatchUpload && (
                     <TouchableOpacity
@@ -557,7 +612,7 @@ const styles = StyleSheet.create({
   },
   cameraContainer: {
     marginHorizontal: 24,
-    height: SCREEN_HEIGHT * 0.32,
+    height: SCREEN_HEIGHT * 0.52,
     borderRadius: 20,
     overflow: 'hidden',
     backgroundColor: '#1F2937',
@@ -953,5 +1008,30 @@ const styles = StyleSheet.create({
     fontFamily: 'Poppins_400Regular',
     textAlign: 'center',
     marginTop: 8,
+  },
+  groupRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    paddingVertical: 4,
+  },
+  groupChip: {
+    paddingVertical: 8,
+    paddingHorizontal: 14,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.2)',
+  },
+  groupChipActive: {
+    backgroundColor: '#DDDDDD',
+    borderColor: '#DDDDDD',
+  },
+  groupChipText: {
+    fontSize: 12,
+    fontFamily: 'Poppins_600SemiBold',
+    color: 'rgba(255,255,255,0.8)',
+  },
+  groupChipTextActive: {
+    color: '#1C1C1E',
   },
 });

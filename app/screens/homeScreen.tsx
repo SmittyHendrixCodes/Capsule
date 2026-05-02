@@ -21,6 +21,7 @@ import { getTheme } from '../context/theme';
 import OnboardingOverlay from '../components/onboardingOverlay';
 import ProPromptModal from '../components/proPromptModal';
 import { useProStatus } from '../hooks/useProStatus';
+import CalendarView from '../components/calendarView';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
 
@@ -47,6 +48,7 @@ export default function HomeScreen() {
   const theme = getTheme(darkMode);
   const { canViewAllCharts, isPro } = useProStatus();
   const [showProPrompt, setShowProPrompt] = useState(false);
+  const [chartView, setChartView] = useState<'line' | 'calendar'>('line');
 
   useFocusEffect(
     useCallback(() => {
@@ -71,19 +73,19 @@ export default function HomeScreen() {
   const thisMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
 
   const monthReceipts = receipts.filter((r) => r.date.startsWith(thisMonth));
-  const totalSpendThisMonth = monthReceipts.reduce((sum, r) => sum + r.total, 0);
+  const totalSpendThisMonth = monthReceipts.reduce((sum, r) => sum + Number(r.total), 0);
   const totalReceipts = receipts.length;
 
   const merchantCount: Record<string, number> = {};
   monthReceipts.forEach((r) => {
-    merchantCount[r.merchant] = (merchantCount[r.merchant] || 0) + r.total;
+    merchantCount[r.merchant] = (merchantCount[r.merchant] || 0) + Number(r.total);
   });
   const topMerchant = Object.entries(merchantCount).sort((a, b) => b[1] - a[1])[0];
 
   const cardCount: Record<string, number> = {};
   receipts.forEach((r) => {
     const card = r.cardLast4 || 'Cash / Not Available';
-    cardCount[card] = (cardCount[card] || 0) + r.total;
+    cardCount[card] = (cardCount[card] || 0) + Number(r.total);
   });
 
   // ── Line Chart Data ────────────────────────────────────
@@ -95,11 +97,22 @@ export default function HomeScreen() {
   const monthlySpend = last6Months.map((month) =>
     receipts
       .filter((r) => r.date.startsWith(month))
-      .reduce((sum, r) => sum + r.total, 0)
+      .reduce((sum, r) => sum + Number(r.total), 0)
   );
 
+  // Line chart Math and Rounding
   const maxSpend = Math.max(...monthlySpend, 1);
-  const yAxisMax = Math.ceil(maxSpend * 1.25);
+
+  const getRoundedMax = (max: number) => {
+  const bumped = max * 1.15; // 15% above highest point
+    if (bumped <= 100) return Math.ceil(bumped / 10) * 10;        // round to nearest 10
+    if (bumped <= 500) return Math.ceil(bumped / 50) * 50;        // round to nearest 50
+    if (bumped <= 1000) return Math.ceil(bumped / 100) * 100;     // round to nearest 100
+    if (bumped <= 5000) return Math.ceil(bumped / 250) * 250;     // round to nearest 250
+    if (bumped <= 10000) return Math.ceil(bumped / 500) * 500;    // round to nearest 500
+    return Math.ceil(bumped / 1000) * 1000;                       // round to nearest 1000
+  };
+  const yAxisMax = getRoundedMax(maxSpend);
 
   const lineData = {
     labels: last6Months.map((m) => m.substring(5)),
@@ -216,23 +229,70 @@ export default function HomeScreen() {
         <View style={styles.section}>
           <Text style={[styles.sectionTitle, { color: theme.text }]}>📈 Spending Trend</Text>
           <View style={[styles.chartCard, { backgroundColor: theme.card }]}>
-            <LineChart
-              data={lineData}
-              width={SCREEN_WIDTH - 64}
-              height={180}
-              chartConfig={chartConfig}
-              bezier
-              style={styles.chart}
-              withInnerLines={false}
-              withOuterLines={false}
-              fromZero={true}
-              yAxisLabel="$"
-              yLabelsOffset={8}
-              segments={4}
-            />
-          </View>
-        </View>
-      )}
+      
+      {/* Toggle Pill */}
+      <View style={[
+        styles.chartToggleContainer,
+        { backgroundColor: theme.cardInner }
+      ]}>
+        <TouchableOpacity
+          style={[
+            styles.chartToggleButton,
+            chartView === 'line' && { backgroundColor: theme.button },
+          ]}
+          onPress={() => setChartView('line')}
+        >
+          <Text style={[
+            styles.chartToggleText,
+            { color: theme.subtext },
+            chartView === 'line' && { color: theme.buttonText },
+          ]}>Line</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[
+            styles.chartToggleButton,
+            chartView === 'calendar' && { backgroundColor: theme.button },
+          ]}
+          onPress={() => setChartView('calendar')}
+        >
+          <Text style={[
+            styles.chartToggleText,
+            { color: theme.subtext },
+            chartView === 'calendar' && { color: theme.buttonText },
+          ]}>Cal</Text>
+        </TouchableOpacity>
+      </View>
+
+      {/* Line Chart */}
+        {chartView === 'line' && (
+          <LineChart
+            data={lineData}
+            width={SCREEN_WIDTH - 64}
+            height={180}
+            chartConfig={chartConfig}
+            bezier
+            style={styles.chart}
+            withInnerLines={false}
+            withOuterLines={false}
+            fromZero={true}
+            yAxisLabel="$"
+            yLabelsOffset={8}
+            segments={4}
+          />
+        )}
+
+        {/* Calendar View */}
+        {chartView === 'calendar' && (
+          <CalendarView
+            receipts={receipts}
+            theme={theme}
+            isPro={isPro}
+          />
+        )}
+
+      </View>
+    </View>
+  )}
 
       {/* Pie Chart */}
       {pieData.length > 0 && canViewAllCharts && (
@@ -617,5 +677,22 @@ const styles = StyleSheet.create({
     fontFamily: 'Poppins_600SemiBold',
     textAlign: 'center' as const,
     lineHeight: 20,
+  },
+  chartToggleContainer: {
+    flexDirection: 'row',
+    borderRadius: 20,
+    padding: 3,
+    alignSelf: 'center',
+    marginBottom: 12,
+    marginTop: 8,
+  },
+  chartToggleButton: {
+    paddingVertical: 6,
+    paddingHorizontal: 20,
+    borderRadius: 17,
+  },
+  chartToggleText: {
+    fontSize: 13,
+    fontFamily: 'Poppins_600SemiBold',
   },
 });
