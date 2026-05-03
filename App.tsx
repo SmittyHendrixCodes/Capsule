@@ -22,10 +22,10 @@ import * as LocalAuthentication from 'expo-local-authentication';
 import WelcomeScreen from './app/screens/welcomeScreen';
 import OnboardingOverlay from './app/components/onboardingOverlay';
 import ProfileScreen from './app/screens/profileScreen';
-import { createStackNavigator } from '@react-navigation/stack';
+import { createNativeStackNavigator } from '@react-navigation/native-stack';
 
 const Tab = createMaterialTopTabNavigator();
-const Stack = createStackNavigator();
+const Stack = createNativeStackNavigator();
 
 function TabNavigator() {
   return (
@@ -207,21 +207,21 @@ export default function App() {
   }, []);
 
   return (
-    <AuthProvider>
-      <SettingsProvider>
-        <SafeAreaProvider>
-          <NavigationContainer ref={navigationRef}>
-          {!fontsLoaded ? (
-            <View style={styles.loadingContainer}>
-              <ActivityIndicator size="large" color="#1C1C1E" />
-          </View>
-        ) : (
-            <RootNavigator />
-        )}
-          </NavigationContainer>
-        </SafeAreaProvider>
-      </SettingsProvider>
-    </AuthProvider>
+      <AuthProvider>
+        <SettingsProvider>
+          <SafeAreaProvider>
+            <NavigationContainer ref={navigationRef}>
+            {!fontsLoaded ? (
+              <View style={styles.loadingContainer}>
+                <ActivityIndicator size="large" color="#1C1C1E" />
+            </View>
+          ) : (
+              <RootNavigator />
+          )}
+            </NavigationContainer>
+          </SafeAreaProvider>
+        </SettingsProvider>
+      </AuthProvider>
   );
 }
 
