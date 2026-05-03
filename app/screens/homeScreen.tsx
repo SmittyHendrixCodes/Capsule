@@ -77,7 +77,8 @@ export default function HomeScreen() {
   const totalReceipts = receipts.length;
 
   const merchantCount: Record<string, number> = {};
-  monthReceipts.forEach((r) => {
+  const receiptsForMerchant = monthReceipts.length > 0 ? monthReceipts : receipts;
+  receiptsForMerchant.forEach((r) => {
     merchantCount[r.merchant] = (merchantCount[r.merchant] || 0) + Number(r.total);
   });
   const topMerchant = Object.entries(merchantCount).sort((a, b) => b[1] - a[1])[0];
@@ -174,6 +175,9 @@ export default function HomeScreen() {
     <ScrollView
       style={[styles.container, { backgroundColor: theme.background }]}
       contentContainerStyle={styles.content}
+      scrollEventThrottle={16}
+      bounces={true}
+      overScrollMode="always"
       refreshControl={
         <RefreshControl
           refreshing={refreshing}

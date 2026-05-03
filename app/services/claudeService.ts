@@ -62,6 +62,16 @@ export const checkReceiptQuality = async (base64Image: string): Promise<{
   return JSON.parse(cleaned);
 };
 
+const normalizeDate = (dateStr: string): string => {
+  if (!dateStr) return new Date().toISOString().split('T')[0];
+  if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) return dateStr;
+  if (/^\d{1,2}\/\d{1,2}\/\d{4}$/.test(dateStr)) {
+    const [month, day, year] = dateStr.split('/');
+    return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+  }
+  return dateStr;
+};
+
 export const analyzeReceipt = async (base64Image: string): Promise<ReceiptData> => {
   try {
     const response = await axios.post(
@@ -108,7 +118,11 @@ export const analyzeReceipt = async (base64Image: string): Promise<ReceiptData> 
     );
     const content = response.data.content[0].text;
     const cleaned = content.replace(/```json|```/g, '').trim();
-    return JSON.parse(cleaned) as ReceiptData;
+    const parsed = JSON.parse(cleaned) as ReceiptData;
+    return {
+      ...parsed,
+      date: normalizeDate(parsed.date),
+    };
   } catch (error: any) {
 
     throw error;

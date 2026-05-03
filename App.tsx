@@ -22,8 +22,28 @@ import * as LocalAuthentication from 'expo-local-authentication';
 import WelcomeScreen from './app/screens/welcomeScreen';
 import OnboardingOverlay from './app/components/onboardingOverlay';
 import ProfileScreen from './app/screens/profileScreen';
+import { createStackNavigator } from '@react-navigation/stack';
 
 const Tab = createMaterialTopTabNavigator();
+const Stack = createStackNavigator();
+
+function TabNavigator() {
+  return (
+    <Tab.Navigator
+      tabBar={(props) => <FloatingTabBar {...props} />}
+      tabBarPosition="bottom"
+      screenOptions={{
+        swipeEnabled: true,
+        tabBarStyle: { display: 'none' },
+        tabBarIndicatorStyle: { display: 'none' },
+      }}
+    >
+      <Tab.Screen name="Home" component={HomeScreen} />
+      <Tab.Screen name="Capture" component={CaptureScreen} />
+      <Tab.Screen name="Ledger" component={LedgerScreen} />
+    </Tab.Navigator>
+  );
+}
 
 function FloatingTabBar({ state, descriptors, navigation }: any) {
   const insets = useSafeAreaInsets();
@@ -142,35 +162,31 @@ function RootNavigator() {
 
   return (
     <>
-      <Tab.Navigator
-        tabBar={(props) => <FloatingTabBar {...props} />}
-        tabBarPosition="bottom"
-        screenOptions={{
-          swipeEnabled: true,
-          tabBarStyle: { display: 'none' },
-          tabBarIndicatorStyle: { display: 'none' },
-        }}
-      >
-        <Tab.Screen name="Home" component={HomeScreen} />
-        <Tab.Screen name="Capture" component={CaptureScreen} />
-        <Tab.Screen name="Ledger" component={LedgerScreen} />
-        <Tab.Screen name="Profile" component={ProfileScreen}
-          options={{ swipeEnabled: false }}/>
-      </Tab.Navigator>
-
-      {showOnboarding && (
-        <OnboardingOverlay
-          currentScreen={currentScreen}
-          onNavigate={handleNavigate}
-          onComplete={async () => {
-            await AsyncStorage.setItem('onboarding_complete', 'true');
-            setShowOnboarding(false);
+      <Stack.Navigator screenOptions={{ headerShown: false }}>
+        <Stack.Screen name="Main" component={TabNavigator} />
+        <Stack.Screen 
+          name="Profile" 
+          component={ProfileScreen}
+          options={{
+            animation: 'slide_from_right',
+            gestureEnabled: true,
           }}
         />
-      )}
-    </>
-  );
-}
+      </Stack.Navigator>
+
+        {showOnboarding && (
+          <OnboardingOverlay
+            currentScreen={currentScreen}
+            onNavigate={handleNavigate}
+            onComplete={async () => {
+              await AsyncStorage.setItem('onboarding_complete', 'true');
+              setShowOnboarding(false);
+            }}
+          />
+        )}
+      </>
+    );
+  }
 
 export default function App() {
   const [fontsLoaded] = useFonts({

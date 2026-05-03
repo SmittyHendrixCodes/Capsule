@@ -9,6 +9,7 @@ import {
   TextInput,
   Alert,
   ActivityIndicator,
+  RefreshControl,
 } from 'react-native';
 import { useAuth } from '../context/authContext';
 import { useSettings } from '../context/settingsContext';
@@ -37,12 +38,19 @@ export default function ProfileScreen() {
   const [editing, setEditing] = useState(false);
   const [newName, setNewName] = useState('');
   const [saving, setSaving] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
 
   useFocusEffect(
     useCallback(() => {
       loadProfile();
     }, [])
   );
+
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    await loadProfile();
+    setRefreshing(false);
+  };
 
   const loadProfile = async () => {
     if (!user) return;
@@ -136,7 +144,17 @@ export default function ProfileScreen() {
         <View style={styles.headerRight} />
       </View>
 
-      <ScrollView contentContainerStyle={styles.content}>
+      <ScrollView 
+        contentContainerStyle={styles.content}
+          refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={handleRefresh}
+            tintColor="#DDDDDD"
+            colors={['#DDDDDD']}
+            />
+          }
+        >
         {/* Avatar */}
         <View style={styles.avatarSection}>
           <View style={[styles.avatar, { backgroundColor: theme.button }]}>

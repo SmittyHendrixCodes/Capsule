@@ -149,20 +149,39 @@ export default function SettingsSidebar({
               <TouchableOpacity 
                 style={[styles.card, { backgroundColor: cardBg }]}
                 onPress={() => {
-
                   onClose();
                   setTimeout(() => onViewProfile(), 500);
                 }}
               >
-                <View style={styles.profileAvatar}>
-                  <Text style={styles.profileAvatarText}>👤</Text>
+              {/* Avatar with initials */}
+              <View style={[styles.profileAvatar, { backgroundColor: 'rgba(255,255,255,0.2)' }]}>
+                <Text style={styles.profileAvatarText}>
+                  {profile?.full_name
+                    ? profile.full_name.split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2)
+                    : user?.email?.[0].toUpperCase() || '👤'}
+                </Text>
+              </View>
+
+              <View style={styles.profileInfo}>
+                {/* Name or email */}
+                <Text style={[styles.profileName, { color: textColor }]} numberOfLines={1}>
+                  {profile?.full_name || user?.email || 'Your Profile'}
+                </Text>
+                {/* Plan badge */}
+                <Text style={[styles.profilePlan, { color: subtextColor }]}>
+                  {profile?.plan === 'pro' ? '⭐ Pro Member' : '🆓 Free Plan'}
+                </Text>
+                {/* Stats row */}
+                <View style={styles.profileStatsRow}>
+                  {profile?.created_at && (
+                    <Text style={[styles.profileStat, { color: subtextColor }]}>
+                      📅 {new Date(profile.created_at).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}
+                    </Text>
+                  )}
                 </View>
-                <View style={styles.profileInfo}>
-                  <Text style={[styles.profileName, { color: textColor }]}>Your Profile</Text>
-                  <Text style={[styles.profileSub, { color: subtextColor }]}>Coming with accounts</Text>
-                </View>
-                <Text style={[styles.arrow, { color: subtextColor }]}>→</Text>
-              </TouchableOpacity>
+              </View>
+              <Text style={[styles.arrow, { color: subtextColor }]}>→</Text>
+            </TouchableOpacity>
 
               {/* Default Export Format */}
               <View style={[styles.card, { backgroundColor: cardBg }]}>
@@ -530,5 +549,19 @@ const styles = StyleSheet.create({
     color: '#DDDDDD',
     fontFamily: 'Poppins_600SemiBold',
     marginLeft: 'auto' as any,
+  },
+  profilePlan: {
+    fontSize: 11,
+    fontFamily: 'Poppins_400Regular',
+    marginTop: 2,
+  },
+  profileStatsRow: {
+    flexDirection: 'row',
+    gap: 8,
+    marginTop: 4,
+  },
+  profileStat: {
+    fontSize: 10,
+    fontFamily: 'Poppins_400Regular',
   },
 });
