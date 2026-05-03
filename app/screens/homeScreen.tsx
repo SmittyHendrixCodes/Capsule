@@ -105,22 +105,39 @@ export default function HomeScreen() {
   const maxSpend = Math.max(...monthlySpend, 1);
 
   const getRoundedMax = (max: number) => {
-  const bumped = max * 1.15; // 15% above highest point
-    if (bumped <= 100) return Math.ceil(bumped / 10) * 10;        // round to nearest 10
-    if (bumped <= 500) return Math.ceil(bumped / 50) * 50;        // round to nearest 50
-    if (bumped <= 1000) return Math.ceil(bumped / 100) * 100;     // round to nearest 100
-    if (bumped <= 5000) return Math.ceil(bumped / 250) * 250;     // round to nearest 250
-    if (bumped <= 10000) return Math.ceil(bumped / 500) * 500;    // round to nearest 500
-    return Math.ceil(bumped / 1000) * 1000;                       // round to nearest 1000
+    const bumped = max * 1.15;
+
+    // Find clean step size based on scale
+    let step: number;
+    if (bumped <= 250) step = 50;
+    else if (bumped <= 500) step = 100;
+    else if (bumped <= 1000) step = 200;
+    else if (bumped <= 2500) step = 500;
+    else if (bumped <= 5000) step = 1000;
+    else step = 2000;
+
+    // Round up to nearest multiple of step
+    const roundedMax = Math.ceil(bumped / step) * step;
+    
+    // Make sure it's divisible by 5 (segments) * step for clean ticks
+    return Math.ceil(roundedMax / (step * 5)) * (step * 5);
   };
   const yAxisMax = getRoundedMax(maxSpend);
 
   const lineData = {
     labels: last6Months.map((m) => m.substring(5)),
-    datasets: [{ 
-      data: monthlySpend.map((v) => (v === 0 ? 0.01 : v)),
-      withDots: true,
-    }],
+    datasets: [
+      { 
+        data: monthlySpend.map((v) => (v === 0 ? 0.01 : v)),
+        withDots: true,
+      },
+      {
+        data: [yAxisMax], // ← forces y-axis max
+        withDots: false,
+        color: () => 'transparent', // invisible
+        strokeWidth: 0,
+      },
+    ],
     legend: [],
   };
 
@@ -169,11 +186,52 @@ export default function HomeScreen() {
     max: yAxisMax,
   };
 
-  return (
-    <View style={[styles.container, { backgroundColor: theme.background }]}>
+return (
+  <View style={[styles.container, { backgroundColor: theme.background }]}>
 
+    {/* Fixed Header */}
+    <View style={[styles.header, { backgroundColor: theme.background }]}>
+      <View>
+        <Text style={[styles.greeting, { color: theme.subtext }]}>{greeting} 👋</Text>
+        <Text style={[styles.appName, { color: theme.text }]}>Capsule</Text>
+      </View>
+      <View style={styles.headerRight}>
+        <TouchableOpacity style={[styles.captureButton, { backgroundColor: theme.button }]} onPress={handleQuickCapture}>
+          <Text style={[styles.captureButtonText, { color: theme.buttonText }]}>📷 Capture</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.gearButton, { backgroundColor: darkMode ? 'rgba(255,255,255,0.1)' : 'rgba(255,255,255,0.15)' }]}
+          onPress={() => setShowSettings(true)}
+        >
+          <Text style={styles.gearIcon}>⚙️</Text>
+        </TouchableOpacity>
+      </View>
+    </View>
+
+    {/* Fixed Stats Bar */}
+    <View style={[styles.statsBar, { backgroundColor: theme.card }]}>
+      <View style={styles.statBarItem}>
+        <Text style={[styles.statBarValue, { color: theme.text }]}>
+          ${totalSpendThisMonth.toFixed(2)}
+        </Text>
+        <Text style={[styles.statBarLabel, { color: theme.subtext }]}>This Month</Text>
+      </View>
+      <View style={[styles.statBarDivider, { backgroundColor: theme.border }]} />
+      <View style={styles.statBarItem}>
+        <Text style={[styles.statBarValue, { color: theme.text }]}>{totalReceipts}</Text>
+        <Text style={[styles.statBarLabel, { color: theme.subtext }]}>Total Logged</Text>
+      </View>
+      <View style={[styles.statBarDivider, { backgroundColor: theme.border }]} />
+      <View style={styles.statBarItem}>
+        <Text style={[styles.statBarValue, { color: theme.text }]} numberOfLines={1}>
+          {topMerchant ? topMerchant[0] : '—'}
+        </Text>
+        <Text style={[styles.statBarLabel, { color: theme.subtext }]}>Top Merchant</Text>
+      </View>
+    </View>
+
+    {/* Scrollable Content */}
     <ScrollView
-      style={[styles.container, { backgroundColor: theme.background }]}
       contentContainerStyle={styles.content}
       scrollEventThrottle={16}
       bounces={true}
@@ -188,115 +246,72 @@ export default function HomeScreen() {
       }
     >
 
-      {/* Header */}
-      <View style={styles.header}>
-        <View>
-          <Text style={[styles.greeting, { color: theme.subtext }]}>{greeting} 👋</Text>
-          <Text style={[styles.appName, { color: theme.text }]}>Capsule</Text>
-        </View>
-        <View style={styles.headerRight}>
-        <TouchableOpacity style={[styles.captureButton, { backgroundColor: theme.button }]} onPress={handleQuickCapture}>
-          <Text style={[styles.captureButtonText, { color: theme.buttonText }]}>📷 Capture</Text>
-        </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.gearButton, { backgroundColor: darkMode ? 'rgba(255,255,255,0.1)' : 'rgba(255,255,255,0.15)' }]}
-            onPress={() => setShowSettings(true)}
-          >
-            <Text style={styles.gearIcon}>⚙️</Text>
-          </TouchableOpacity>
-        </View>
-      </View>
-
-      {/* Stats Row */}
-      <View style={styles.statsRow}>
-        <View style={[styles.statCard, styles.statCardPrimary, { backgroundColor: theme.accent }]}>
-          <Text style={[styles.statLabelLight, { color: '#53727B' }]}>This Month</Text>
-          <Text style={[styles.statValueLarge, { color: '#1C1C1E' }]}>${totalSpendThisMonth.toFixed(2)}</Text>
-          <Text style={[styles.statSubLight, { color: '#53727B' }]}>{monthReceipts.length} receipts</Text>
-        </View>
-        <View style={styles.statsColumn}>
-          <View style={[styles.statCardSmall, { backgroundColor: theme.card }]}>
-            <Text style={[styles.statLabel, { color: theme.subtext }]}>Total Logged</Text>
-            <Text style={[styles.statValue, { color: theme.text }]}>{totalReceipts}</Text>
-          </View>
-          <View style={[styles.statCardSmall, { backgroundColor: theme.card }]}>
-            <Text style={[styles.statLabel, { color: theme.subtext }]}>Top Merchant</Text>
-            <Text style={[styles.statValueSmall, { color: theme.text }]} numberOfLines={1}>
-              {topMerchant ? topMerchant[0] : '—'}
-            </Text>
-          </View>
-        </View>
-      </View>
-
-      {/* Line Chart */}
+      {/* Line Chart + Calendar Toggle */}
       {receipts.length > 0 && (
         <View style={styles.section}>
           <Text style={[styles.sectionTitle, { color: theme.text }]}>📈 Spending Trend</Text>
           <View style={[styles.chartCard, { backgroundColor: theme.card }]}>
-      
-      {/* Toggle Pill */}
-      <View style={[
-        styles.chartToggleContainer,
-        { backgroundColor: theme.cardInner }
-      ]}>
-        <TouchableOpacity
-          style={[
-            styles.chartToggleButton,
-            chartView === 'line' && { backgroundColor: theme.button },
-          ]}
-          onPress={() => setChartView('line')}
-        >
-          <Text style={[
-            styles.chartToggleText,
-            { color: theme.subtext },
-            chartView === 'line' && { color: theme.buttonText },
-          ]}>Line</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[
-            styles.chartToggleButton,
-            chartView === 'calendar' && { backgroundColor: theme.button },
-          ]}
-          onPress={() => setChartView('calendar')}
-        >
-          <Text style={[
-            styles.chartToggleText,
-            { color: theme.subtext },
-            chartView === 'calendar' && { color: theme.buttonText },
-          ]}>Cal</Text>
-        </TouchableOpacity>
-      </View>
 
-      {/* Line Chart */}
-        {chartView === 'line' && (
-          <LineChart
-            data={lineData}
-            width={SCREEN_WIDTH - 64}
-            height={180}
-            chartConfig={chartConfig}
-            bezier
-            style={styles.chart}
-            withInnerLines={false}
-            withOuterLines={false}
-            fromZero={true}
-            yAxisLabel="$"
-            yLabelsOffset={8}
-            segments={4}
-          />
-        )}
+            {/* Toggle Pill */}
+            <View style={[styles.chartToggleContainer, { backgroundColor: theme.cardInner }]}>
+              <TouchableOpacity
+                style={[
+                  styles.chartToggleButton,
+                  chartView === 'line' && { backgroundColor: theme.button },
+                ]}
+                onPress={() => setChartView('line')}
+              >
+                <Text style={[
+                  styles.chartToggleText,
+                  { color: theme.subtext },
+                  chartView === 'line' && { color: theme.buttonText },
+                ]}>Line</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[
+                  styles.chartToggleButton,
+                  chartView === 'calendar' && { backgroundColor: theme.button },
+                ]}
+                onPress={() => setChartView('calendar')}
+              >
+                <Text style={[
+                  styles.chartToggleText,
+                  { color: theme.subtext },
+                  chartView === 'calendar' && { color: theme.buttonText },
+                ]}>Cal</Text>
+              </TouchableOpacity>
+            </View>
 
-        {/* Calendar View */}
-        {chartView === 'calendar' && (
-          <CalendarView
-            receipts={receipts}
-            theme={theme}
-            isPro={isPro}
-          />
-        )}
+            {/* Line Chart */}
+            {chartView === 'line' && (
+              <LineChart
+                data={lineData}
+                width={SCREEN_WIDTH - 64}
+                height={180}
+                chartConfig={chartConfig}
+                bezier
+                style={styles.chart}
+                withInnerLines={false}
+                withOuterLines={false}
+                fromZero={true}
+                yAxisLabel="$"
+                yLabelsOffset={8}
+                segments={5}
+              />
+            )}
 
-      </View>
-    </View>
-  )}
+            {/* Calendar View */}
+            {chartView === 'calendar' && (
+              <CalendarView
+                receipts={receipts}
+                theme={theme}
+                isPro={isPro}
+              />
+            )}
+
+          </View>
+        </View>
+      )}
 
       {/* Pie Chart */}
       {pieData.length > 0 && canViewAllCharts && (
@@ -327,13 +342,14 @@ export default function HomeScreen() {
                 <Text style={[styles.cardBreakdownLabel, { color: theme.subtext }]}>
                   {card === 'Cash / Not Available' ? '💵 Cash / N/A' : `•••• ${card}`}
                 </Text>
-                <Text style={[styles.cardBreakdownValue, { color: theme.text }]}>${amount.toFixed(2)}</Text>
+                <Text style={[styles.cardBreakdownValue, { color: theme.text }]}>${Number(amount).toFixed(2)}</Text>
               </View>
             ))}
           </View>
         </View>
       )}
 
+      {/* Upgrade Prompt */}
       {!isPro && (
         <TouchableOpacity
           style={[styles.upgradePrompt, { backgroundColor: theme.card }]}
@@ -360,7 +376,9 @@ export default function HomeScreen() {
               </View>
               <View style={styles.recentRight}>
                 <Text style={[styles.recentTotal, { color: theme.text }]}>${receipt.total}</Text>
-                <Text style={[styles.recentCategory, { color: theme.subtext, backgroundColor: theme.cardInner }]}>{receipt.category}</Text>
+                <Text style={[styles.recentCategory, { color: theme.subtext, backgroundColor: theme.cardInner }]}>
+                  {receipt.category}
+                </Text>
               </View>
             </View>
           ))}
@@ -373,6 +391,7 @@ export default function HomeScreen() {
         </View>
       )}
 
+      {/* Empty State */}
       {receipts.length === 0 && (
         <View style={styles.emptyState}>
           <Text style={styles.emptyEmoji}>🚀</Text>
@@ -382,7 +401,10 @@ export default function HomeScreen() {
           </Text>
         </View>
       )}
+
     </ScrollView>
+
+    {/* Overlays */}
       {showOnboarding && (
         <OnboardingOverlay
           currentScreen="Home"
@@ -398,16 +420,16 @@ export default function HomeScreen() {
         visible={showSettings}
         onClose={() => setShowSettings(false)}
         onReplayOnboarding={() => setShowOnboarding(true)}
-        onViewProfile={() => {
-          navigation.navigate('Profile');
-        }}
+        onViewProfile={() => navigation.navigate('Profile')}
       />
+
       <ProPromptModal
         visible={showProPrompt}
         onClose={() => setShowProPrompt(false)}
         feature="Advanced Analytics"
         description="Unlock category breakdowns, card spending analysis and more with Pro."
       />
+
     </View>
   );
 }
@@ -698,5 +720,31 @@ const styles = StyleSheet.create({
   chartToggleText: {
     fontSize: 13,
     fontFamily: 'Poppins_600SemiBold',
+  },
+  statsBar: {
+    flexDirection: 'row',
+    paddingVertical: 14,
+    paddingHorizontal: 20,
+    marginHorizontal: 16,
+    borderRadius: 16,
+    marginBottom: 8,
+    alignItems: 'center',
+  },
+  statBarItem: {
+    flex: 1,
+    alignItems: 'center',
+  },
+  statBarValue: {
+    fontSize: 15,
+    fontFamily: 'Poppins_700Bold',
+    marginBottom: 2,
+  },
+  statBarLabel: {
+    fontSize: 10,
+    fontFamily: 'Poppins_400Regular',
+  },
+  statBarDivider: {
+    width: 1,
+    height: 30,
   },
 });

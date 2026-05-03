@@ -29,6 +29,7 @@ import { Group, getGroups } from '../services/groupService';
 import { assignReceiptToGroup } from '../services/groupService';
 import { useAuth } from '../context/authContext';
 import { getReceipts } from '../services/receiptService';
+import { hapticMedium, hapticSuccess } from '../utils/haptics';
 
 const SCREEN_HEIGHT = Dimensions.get('window').height;
 
@@ -167,6 +168,7 @@ export default function CaptureScreen() {
   };
 
   const takePicture = async () => {
+    await hapticMedium();
     if (!canCapture) {
       setShowProPrompt(true);
       return;
@@ -232,7 +234,7 @@ export default function CaptureScreen() {
           await assignReceiptToGroup(latest.id, selectedGroupId);
         }
       }
-
+      await hapticSuccess();
       setSaved(true);
       Alert.alert('Saved!', 'Receipt has been saved to your Capsule.');
     } catch (error) {
@@ -311,7 +313,6 @@ export default function CaptureScreen() {
       {/* Header */}
       <View style={styles.header}>
         <Text style={[styles.title, { color: theme.text }]}>Capture</Text>
-        <Text style={[styles.subtitle, { color: theme.subtext }]}>Point at a receipt and capture</Text>
       </View>
 
       {/* Camera Preview */}
@@ -605,11 +606,6 @@ const styles = StyleSheet.create({
     color: '#1F2937',
     marginBottom: 4,
   },
-  subtitle: {
-    fontSize: 14,
-    fontFamily: 'Poppins_400Regular',
-    color: '#1C1C1E',
-  },
   cameraContainer: {
     marginHorizontal: 24,
     height: SCREEN_HEIGHT * 0.52,
@@ -660,7 +656,7 @@ const styles = StyleSheet.create({
   buttonSection: {
     alignItems: 'center',
     justifyContent: 'center',
-    paddingTop: 32,
+    paddingTop: 16,
     width: '100%',
   },
   captureButton: {
@@ -706,7 +702,7 @@ const styles = StyleSheet.create({
   },
   galleryButton: {
     backgroundColor: '#fff',
-    paddingVertical: 14,
+    paddingVertical: 7,
     paddingHorizontal: 32,
     borderRadius: 14,
     shadowColor: '#000',

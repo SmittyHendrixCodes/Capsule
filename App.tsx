@@ -23,6 +23,9 @@ import WelcomeScreen from './app/screens/welcomeScreen';
 import OnboardingOverlay from './app/components/onboardingOverlay';
 import ProfileScreen from './app/screens/profileScreen';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
+import { LinearGradient } from 'expo-linear-gradient';
+import { hapticLight } from './app/utils/haptics';
+import LoadingScreen from './app/screens/loadingScreen';
 
 const Tab = createMaterialTopTabNavigator();
 const Stack = createNativeStackNavigator();
@@ -64,6 +67,7 @@ function FloatingTabBar({ state, descriptors, navigation }: any) {
           if (!icons[route.name]) return null;
 
           const onPress = () => {
+            hapticLight();
             const event = navigation.emit({
               type: 'tabPress',
               target: route.key,
@@ -81,6 +85,17 @@ function FloatingTabBar({ state, descriptors, navigation }: any) {
               style={[styles.tabItem, isFocused && styles.tabItemActive]}
               activeOpacity={0.8}
             >
+              {isFocused && (
+                <LinearGradient
+                  colors={[
+                    'rgba(255,255,255,0.35)',  // bright top
+                    'rgba(255,255,255,0.05)',  // fade to transparent bottom
+                  ]}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 0, y: 1 }}
+                  style={styles.tabItemGloss}
+                />
+              )}
               <Text style={[styles.tabIcon, isFocused && styles.tabIconActive]}>
                 {icons[route.name]}
               </Text>
@@ -194,7 +209,14 @@ export default function App() {
     Poppins_600SemiBold,
     Poppins_700Bold,
   });
+  const [showLoading, setShowLoading] = useState(true);
   const navigationRef = useNavigationContainerRef();
+
+  useEffect(() => {
+    if (fontsLoaded) {
+      setTimeout(() => setShowLoading(false), 2500); // shows for 2.5 seconds
+    }
+  }, [fontsLoaded]);
 
   useEffect(() => {
     const subscription = Notifications.addNotificationResponseReceivedListener(response => {
@@ -211,11 +233,9 @@ export default function App() {
         <SettingsProvider>
           <SafeAreaProvider>
             <NavigationContainer ref={navigationRef}>
-            {!fontsLoaded ? (
-              <View style={styles.loadingContainer}>
-                <ActivityIndicator size="large" color="#1C1C1E" />
-            </View>
-          ) : (
+              {!fontsLoaded || showLoading ? (
+                <LoadingScreen />
+              ) : (
               <RootNavigator />
           )}
             </NavigationContainer>
@@ -265,9 +285,6 @@ const styles = StyleSheet.create({
     borderRadius: 32,
     gap: 6,
   },
-  tabItemActive: {
-    backgroundColor: '#DDDDDD',
-  },
   tabIcon: {
     fontSize: 16,
     color: 'rgba(221,221,221,0.4)',
@@ -283,5 +300,27 @@ const styles = StyleSheet.create({
   },
   tabLabelActive: {
     color: '#1C1C1E',
+  },
+  tabItemActive: {
+    backgroundColor: '#DDDDDD',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.6)',
+    borderBottomColor: 'rgba(200,200,200,0.3)',
+    shadowColor: '#fff',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.5,
+    shadowRadius: 4,
+    elevation: 3,
+    overflow: 'hidden',
+  },
+  tabItemGloss: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: '50%' as any,
+    backgroundColor: 'rgba(255,255,255,0.15)',
+    borderTopLeftRadius: 32,
+    borderTopRightRadius: 32,
   },
 });

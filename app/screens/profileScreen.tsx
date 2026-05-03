@@ -222,7 +222,12 @@ export default function ProfileScreen() {
         <View style={[styles.card, { backgroundColor: theme.card }]}>
           <View style={[styles.infoRow, { borderBottomColor: theme.border }]}>
             <Text style={[styles.infoLabel, { color: theme.subtext }]}>📧 Email</Text>
-            <Text style={[styles.infoValue, { color: theme.text }]}>
+            <Text 
+              style={[styles.infoValue, { color: theme.text }]}
+                numberOfLines={1}
+                adjustsFontSizeToFit
+                minimumFontScale={0.7}
+              >
               {user?.email || profile?.email}
             </Text>
           </View>

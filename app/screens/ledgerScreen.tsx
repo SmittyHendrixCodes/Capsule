@@ -31,6 +31,7 @@ import ProPromptModal from '../components/proPromptModal';
 import GroupManagerModal from '../components/groupManagerModal';
 import { Group } from '../services/groupService';
 import { assignReceiptToGroup } from '../services/groupService';
+import { hapticMedium } from '../utils/haptics';
 
 const MODULE_EMOJI: Record<string, string> = {
   work: '💼',
@@ -56,6 +57,38 @@ const ReceiptCard = ({
 }) => {
   const opacity = React.useRef(new Animated.Value(0)).current;
   const translateY = React.useRef(new Animated.Value(20)).current;
+  const translateX = React.useRef(new Animated.Value(0)).current;
+  const deleteOpacity = React.useRef(new Animated.Value(1)).current;
+
+  const handleDelete = () => {
+    Alert.alert(
+      'Delete Receipt',
+      'Are you sure you want to delete this receipt?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: () => {
+            Animated.parallel([
+              Animated.timing(translateX, {
+                toValue: -400,
+                duration: 250,
+                useNativeDriver: true,
+              }),
+              Animated.timing(deleteOpacity, {
+                toValue: 0,
+                duration: 250,
+                useNativeDriver: true,
+              }),
+            ]).start(() => {
+              receipt.id && onDelete(receipt.id);
+            });
+          },
+        },
+      ]
+    );
+  };
 
   const animate = () => {
     opacity.setValue(0);
@@ -83,7 +116,10 @@ const ReceiptCard = ({
   );
 
   return (
-    <Animated.View style={{ opacity, transform: [{ translateY }] }}>
+    <Animated.View style={{ 
+      opacity: deleteOpacity, 
+      transform: [{ translateY }, { translateX}]
+      }}>
       <TouchableOpacity 
         onPress={() => onPress(receipt)}
         onLongPress={() => onLongPress(receipt)}
@@ -107,20 +143,7 @@ const ReceiptCard = ({
           <View style={styles.cardFooter}>
             <TouchableOpacity
               style={styles.deleteButton}
-              onPress={() =>
-                Alert.alert(
-                  'Delete Receipt',
-                  'Are you sure you want to delete this receipt?',
-                  [
-                    { text: 'Cancel', style: 'cancel' },
-                    {
-                      text: 'Delete',
-                      style: 'destructive',
-                      onPress: () => receipt.id && onDelete(receipt.id),
-                    },
-                  ]
-                )
-              }
+              onPress={ handleDelete}
             >
               <Text style={styles.deleteText}>🗑 Delete</Text>
             </TouchableOpacity>
@@ -429,12 +452,10 @@ export default function LedgerScreen() {
     selectedMonth !== 'all',
   ].filter(Boolean).length;
 
-  const handleDelete = useCallback(
-    async (id: number) => {
-      await removeReceipt(id);
-    },
-    [removeReceipt]
-  );
+  const handleDelete = useCallback(async (id: number) => {
+    await hapticMedium();
+    await removeReceipt(id);
+  }, [removeReceipt]);
 
   const handlePress = (receipt: Receipt) => {
     setSelectedReceipt(receipt);
@@ -959,11 +980,13 @@ const styles = StyleSheet.create({
   },
   chipScroll: {
     marginBottom: 12,
+    maxHeight: 36,
   },
   chipContainer: {
     paddingHorizontal: 24,
     gap: 8,
     flexDirection: 'row',
+    alignItems: 'center',
   },
   chip: {
     backgroundColor: '#DDDDDD',
@@ -1421,6 +1444,7 @@ const styles = StyleSheet.create({
   historyBanner: {
     marginHorizontal: 16,
     marginBottom: 8,
+    marginTop: -16,
     borderRadius: 10,
     padding: 10,
     alignItems: 'center',
