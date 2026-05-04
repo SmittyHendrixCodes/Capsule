@@ -54,8 +54,6 @@ export default function CaptureScreen() {
   const pulseAnim = React.useRef(new Animated.Value(1)).current;
   const pulseOpacity = React.useRef(new Animated.Value(0.6)).current;
   const saveScale = React.useRef(new Animated.Value(1)).current;
-  const [duplicate, setDuplicate] = useState<any>(null);
-  const [showDuplicateWarning, setShowDuplicateWarning] = useState(false);
   const [qualityIssue, setQualityIssue] = useState<string | null>(null);
   const [sessionQueue, setSessionQueue] = useState<QueuedReceipt[]>([]);
   const [showReviewSession, setShowReviewSession] = useState(false);
@@ -66,7 +64,9 @@ export default function CaptureScreen() {
   const [groups, setGroups] = useState<Group[]>([]);
   const [selectedGroupId, setSelectedGroupId] = useState<string | null>(null);
   const { user } = useAuth();
-  const [showFuzzyWarning, setShowFuzzyWarning] = useState(false);
+  const [duplicate, setDuplicate] = useState<any>(null);
+  const [duplicateType, setDuplicateType] = useState<'exact' | 'fuzzy' | null>(null);
+  const duplicateRef = useRef<{ type: 'exact' | 'fuzzy', data: any } | null>(null);
 
   useFocusEffect(
     useCallback(() => {
@@ -131,7 +131,8 @@ export default function CaptureScreen() {
     setReceipt(null);
     setSaved(false);
     setDuplicate(null);
-    setShowDuplicateWarning(false);
+    setDuplicateType(null);
+    duplicateRef.current = null;
     setQualityIssue(null);
     setLoading(true);
     setModalVisible(true);
@@ -158,12 +159,19 @@ export default function CaptureScreen() {
           user?.id
         );
 
+        // Small delay to let React flush the receipt state first
+        await new Promise<void>(resolve => setTimeout(resolve, 100));
+
         if (isDuplicate) {
+          duplicateRef.current = { type: 'exact', data: existing };
           setDuplicate(existing);
-          setShowDuplicateWarning(true);
+          setDuplicateType('exact');
         } else if (isFuzzy) {
+          duplicateRef.current = { type: 'fuzzy', data: existing };
           setDuplicate(existing);
-          setShowFuzzyWarning(true); // new state
+          setDuplicateType('fuzzy');
+        } else {
+          duplicateRef.current = null;
         }
 
         // Add to session Queue
@@ -172,20 +180,19 @@ export default function CaptureScreen() {
       } catch (error) {
         Alert.alert('Error', 'Could not analyze receipt. Please try again.');
         setModalVisible(false);
-        console.error(error);
       } finally {
         setLoading(false);
     }
   };
 
   const takePicture = async () => {
-    await hapticMedium();
     if (!canCapture) {
       setShowProPrompt(true);
       return;
     }
     if (!cameraRef.current) return;
     try {
+      await hapticMedium();
       const photo = await cameraRef.current.takePictureAsync({
         base64: true,
         quality: 0.8,
@@ -281,10 +288,10 @@ export default function CaptureScreen() {
     setSaved(false);
     setSelectedModule('general');
     setDuplicate(null);
-    setShowDuplicateWarning(false);
+    setDuplicateType(null);
+    duplicateRef.current = null;
     setQualityIssue(null);
     setSelectedGroupId(null);
-    setShowFuzzyWarning(false);
   };
   
   if (!permission) {
@@ -426,12 +433,42 @@ export default function CaptureScreen() {
                 </View>
               )}
 
-              {showFuzzyWarning && duplicate && (
+              {/* Exact Duplicate Warning */}
+              {duplicateType === 'exact' && duplicate && (
+                <View style={styles.duplicateWarning}>
+                  <View style={styles.duplicateWarningHeader}>
+                    <Text style={styles.duplicateWarningEmoji}>⚠️</Text>
+                    <Text style={styles.duplicateWarningTitle}>Possible Duplicate</Text>
+                    <TouchableOpacity onPress={() => {
+                      duplicateRef.current = null;
+                      setDuplicateType(null);
+                      setDuplicate(null);
+                    }}>
+                      <Text style={styles.duplicateWarningDismiss}>✕</Text>
+                    </TouchableOpacity>
+                  </View>
+                  <Text style={styles.duplicateWarningText}>
+                    A receipt from <Text style={styles.duplicateWarningBold}>{duplicate.merchant}</Text> on{' '}
+                    <Text style={styles.duplicateWarningBold}>{duplicate.date}</Text> for{' '}
+                    <Text style={styles.duplicateWarningBold}>${duplicate.total}</Text> already exists in your Capsule.
+                  </Text>
+                  <Text style={styles.duplicateWarningSubtext}>
+                    You can still save this receipt if it's different.
+                  </Text>
+                </View>
+              )}
+
+              {/* Fuzzy Warning */}
+              {duplicateType === 'fuzzy' && duplicate && (
                 <View style={[styles.duplicateWarning, { borderLeftColor: '#F59E0B' }]}>
                   <View style={styles.duplicateWarningHeader}>
                     <Text style={styles.duplicateWarningEmoji}>🤔</Text>
                     <Text style={styles.duplicateWarningTitle}>Looks Similar</Text>
-                    <TouchableOpacity onPress={() => setShowFuzzyWarning(false)}>
+                    <TouchableOpacity onPress={() => {
+                      duplicateRef.current = null;
+                      setDuplicateType(null);
+                      setDuplicate(null);
+                    }}>
                       <Text style={styles.duplicateWarningDismiss}>✕</Text>
                     </TouchableOpacity>
                   </View>

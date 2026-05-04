@@ -22,6 +22,7 @@ import OnboardingOverlay from '../components/onboardingOverlay';
 import ProPromptModal from '../components/proPromptModal';
 import { useProStatus } from '../hooks/useProStatus';
 import CalendarView from '../components/calendarView';
+import FeedbackModal from '../components/feedbackModal';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
 
@@ -49,13 +50,14 @@ export default function HomeScreen() {
   const { canViewAllCharts, isPro } = useProStatus();
   const [showProPrompt, setShowProPrompt] = useState(false);
   const [chartView, setChartView] = useState<'line' | 'calendar'>('line');
+  const [showFeedback, setShowFeedback] = useState(false);
 
   useFocusEffect(
     useCallback(() => {
       loadReceipts();
       const hour = new Date().getHours();
       if (hour < 12) setGreeting('Good morning');
-      else if (hour < 18) setGreeting('Good afternoon');
+      else if (hour > 12 && hour < 18) setGreeting('Good afternoon');
       else setGreeting('Good evening');
     }, [])
   );
@@ -421,6 +423,12 @@ return (
         onClose={() => setShowSettings(false)}
         onReplayOnboarding={() => setShowOnboarding(true)}
         onViewProfile={() => navigation.navigate('Profile')}
+        onOpenFeedback={() => setShowFeedback(true)}
+      />
+
+      <FeedbackModal
+        visible={showFeedback}
+        onClose={() => setShowFeedback(false)}
       />
 
       <ProPromptModal

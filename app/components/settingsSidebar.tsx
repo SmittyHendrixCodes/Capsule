@@ -41,6 +41,7 @@ interface SettingsSidebarProps {
   onClose: () => void;
   onReplayOnboarding: () => void;
   onViewProfile: () => void;
+  onOpenFeedback: () => void;
 }
 
 export default function SettingsSidebar({
@@ -48,6 +49,7 @@ export default function SettingsSidebar({
   onClose,
   onReplayOnboarding,
   onViewProfile,
+  onOpenFeedback,
 }: SettingsSidebarProps) {
   const { signOut, user } = useAuth();
   const {
@@ -180,7 +182,6 @@ export default function SettingsSidebar({
                   )}
                 </View>
               </View>
-              <Text style={[styles.arrow, { color: subtextColor }]}>→</Text>
             </TouchableOpacity>
 
               {/* Default Export Format */}
@@ -281,19 +282,16 @@ export default function SettingsSidebar({
                 </TouchableOpacity>
 
                 <View style={[styles.divider, { backgroundColor: 'rgba(255,255,255,0.1)' }]} />
-
-                <TouchableOpacity style={styles.actionRow} onPress={handleRateApp}>
-                  <Text style={[styles.actionText, { color: textColor }]}>⭐ Rate the App</Text>
-                  <Text style={[styles.arrow, { color: subtextColor }]}>→</Text>
-                </TouchableOpacity>
-
-                <View style={[styles.divider, { backgroundColor: 'rgba(255,255,255,0.1)' }]} />
-
-                <TouchableOpacity style={styles.actionRow} onPress={() => setShowFeedback(true)}>
-                  <Text style={[styles.actionText, { color: textColor }]}>📬 Send Feedback</Text>
-                  <Text style={[styles.arrow, { color: subtextColor }]}>→</Text>
-                </TouchableOpacity>
-
+                  <TouchableOpacity
+                    style={styles.actionRow}
+                    onPress={() => {
+                      onClose();
+                      setTimeout(() => onOpenFeedback(), 300);
+                    }}
+                  >
+                    <Text style={[styles.actionText, { color: textColor }]}>💬 Feedback</Text>
+                    <Text style={[styles.arrow, {color: subtextColor }]}>→</Text>
+                  </TouchableOpacity>
                 <View style={[styles.divider, { backgroundColor: 'rgba(255,255,255,0.1)' }]} />
 
                 <TouchableOpacity style={styles.actionRow} onPress={handlePrivacyPolicy}>
@@ -312,14 +310,14 @@ export default function SettingsSidebar({
 
               {/* Sign Out */}
               <TouchableOpacity
-                style={[styles.card, { backgroundColor: cardBg }]}
+                style={[styles.card, { backgroundColor: 'rgba(255, 33, 33, 0.52)' }]}
                 onPress={async () => {
                   await signOut();
                   onClose();
                 }}
               >
                 <View style={styles.actionRow}>
-                  <Text style={[styles.actionText, { color: '#EF4444' }]}>🚪 Sign Out</Text>
+                  <Text style={[styles.actionText, { color: '#ffffff' }]}>🚪 Sign Out</Text>
                   <Text style={[styles.arrow, { color: '#EF4444' }]}>→</Text>
                 </View>
               </TouchableOpacity>
@@ -563,5 +561,17 @@ const styles = StyleSheet.create({
   profileStat: {
     fontSize: 10,
     fontFamily: 'Poppins_400Regular',
+  },
+  item: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: 14,
+    borderRadius: 12,
+    marginBottom: 8,
+  },
+  itemText: {
+    fontSize: 14,
+    fontFamily: 'Poppins_600SemiBold',
   },
 });
