@@ -4,6 +4,7 @@ import {
   saveReceipt as addSQLiteReceipt,
   deleteReceipt as deleteSQLiteReceipt,
   updateReceipt as updateSQLiteReceipt,
+  checkDuplicate as checkDuplicateSQLite,
 } from './database';
 import { Receipt } from '../types/receipt';
 
@@ -121,4 +122,68 @@ export const updateReceipt = async (
     console.error('Supabase updateReceipt error:', error);
     await updateSQLiteReceipt(receipt);
   }
+};
+
+// ── Check Duplicate Receipt ─────────────────────────────────────
+export const checkFuzzyDuplicate = async (
+  merchant: string,
+  date: string,
+  total: number,
+  items: string,
+  userId?: string
+): Promise<{ isDuplicate: boolean; isFuzzy: boolean; existing?: any }> => {
+  
+  const tolerance = Math.max(1.00, total * 0.05); // $1 or 5% whichever is higher
+  const minTotal = total - tolerance;
+  const maxTotal = total + tolerance;
+
+  if (!userId) {
+    // SQLite check
+    const existing = await checkDuplicateSQLite(merchant, date, total);
+    if (existing) return { isDuplicate: true, isFuzzy: false, existing };
+    return { isDuplicate: false, isFuzzy: false };
+  }
+
+  // Supabase — check exact first
+  const { data: exactMatch } = await supabase
+    .from('receipts')
+    .select('*')
+    .eq('user_id', userId)
+    .eq('merchant', merchant)
+    .eq('date', date)
+    .eq('total', total)
+    .limit(1);
+
+  if (exactMatch && exactMatch.length > 0) {
+    return { isDuplicate: true, isFuzzy: false, existing: exactMatch[0] };
+  }
+
+  // Fuzzy check — same merchant, same date, total within tolerance
+  const { data: fuzzyMatch } = await supabase
+    .from('receipts')
+    .select('*')
+    .eq('user_id', userId)
+    .eq('merchant', merchant)
+    .eq('date', date)
+    .gte('total', minTotal)
+    .lte('total', maxTotal)
+    .limit(1);
+
+  if (fuzzyMatch && fuzzyMatch.length > 0) {
+    // Check item overlap
+    const existingItems = fuzzyMatch[0].items.toLowerCase().split(',').map((i: string) => i.trim());
+    const newItems = items.toLowerCase().split(',').map((i: string) => i.trim());
+    
+    const overlap = newItems.filter(item => 
+      existingItems.some((ei: string) => ei.includes(item) || item.includes(ei))
+    );
+    
+    const overlapPercent = overlap.length / Math.max(newItems.length, existingItems.length);
+    
+    if (overlapPercent >= 0.5) {
+      return { isDuplicate: false, isFuzzy: true, existing: fuzzyMatch[0] };
+    }
+  }
+
+  return { isDuplicate: false, isFuzzy: false };
 };

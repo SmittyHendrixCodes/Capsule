@@ -17,7 +17,6 @@ import * as ImagePicker from 'expo-image-picker';
 import { useFocusEffect } from '@react-navigation/native';
 import { useReceipts } from '../hooks/useReceipts';
 import { ModuleType } from '../types/receipt';
-import { checkDuplicate } from '../services/database';
 import { analyzeReceipt, checkReceiptQuality, ReceiptData } from '../services/claudeService';
 import ReviewSessionScreen, { QueuedReceipt } from './reviewSessionScreen';
 import { getTheme } from '../context/theme';
@@ -30,6 +29,7 @@ import { assignReceiptToGroup } from '../services/groupService';
 import { useAuth } from '../context/authContext';
 import { getReceipts } from '../services/receiptService';
 import { hapticMedium, hapticSuccess } from '../utils/haptics';
+import { checkFuzzyDuplicate } from '../services/receiptService';
 
 const SCREEN_HEIGHT = Dimensions.get('window').height;
 
@@ -66,6 +66,7 @@ export default function CaptureScreen() {
   const [groups, setGroups] = useState<Group[]>([]);
   const [selectedGroupId, setSelectedGroupId] = useState<string | null>(null);
   const { user } = useAuth();
+  const [showFuzzyWarning, setShowFuzzyWarning] = useState(false);
 
   useFocusEffect(
     useCallback(() => {
@@ -149,10 +150,20 @@ export default function CaptureScreen() {
         setReceipt(data);
 
         // Step 3 — duplicate check
-        const existing = await checkDuplicate(data.merchant, data.date, data.total);
-        if (existing) {
+        const { isDuplicate, isFuzzy, existing } = await checkFuzzyDuplicate(
+          data.merchant,
+          data.date,
+          data.total,
+          Array.isArray(data.items) ? data.items.join(', ') : data.items,
+          user?.id
+        );
+
+        if (isDuplicate) {
           setDuplicate(existing);
           setShowDuplicateWarning(true);
+        } else if (isFuzzy) {
+          setDuplicate(existing);
+          setShowFuzzyWarning(true); // new state
         }
 
         // Add to session Queue
@@ -273,6 +284,7 @@ export default function CaptureScreen() {
     setShowDuplicateWarning(false);
     setQualityIssue(null);
     setSelectedGroupId(null);
+    setShowFuzzyWarning(false);
   };
   
   if (!permission) {
@@ -414,20 +426,23 @@ export default function CaptureScreen() {
                 </View>
               )}
 
-              {showDuplicateWarning && duplicate && (
-                <View style={styles.duplicateWarning}>
+              {showFuzzyWarning && duplicate && (
+                <View style={[styles.duplicateWarning, { borderLeftColor: '#F59E0B' }]}>
                   <View style={styles.duplicateWarningHeader}>
-                    <Text style={styles.duplicateWarningEmoji}>⚠️</Text>
-                    <Text style={styles.duplicateWarningTitle}>Possible Duplicate</Text>
-                    <TouchableOpacity onPress={() => setShowDuplicateWarning(false)}>
+                    <Text style={styles.duplicateWarningEmoji}>🤔</Text>
+                    <Text style={styles.duplicateWarningTitle}>Looks Similar</Text>
+                    <TouchableOpacity onPress={() => setShowFuzzyWarning(false)}>
                       <Text style={styles.duplicateWarningDismiss}>✕</Text>
                     </TouchableOpacity>
                   </View>
                   <Text style={styles.duplicateWarningText}>
-                    A receipt from <Text style={styles.duplicateWarningBold}>{duplicate.merchant}</Text> on <Text style={styles.duplicateWarningBold}>{duplicate.date}</Text> for <Text style={styles.duplicateWarningBold}>${duplicate.total}</Text> already exists in your Capsule.
+                    A receipt from <Text style={styles.duplicateWarningBold}>{duplicate.merchant}</Text> on{' '}
+                    <Text style={styles.duplicateWarningBold}>{duplicate.date}</Text> for{' '}
+                    <Text style={styles.duplicateWarningBold}>${duplicate.total}</Text> looks similar.
+                    Claude may have misread the total slightly.
                   </Text>
                   <Text style={styles.duplicateWarningSubtext}>
-                    You can still save this receipt if it's different.
+                    Double check before saving — this might already be in your Capsule.
                   </Text>
                 </View>
               )}
