@@ -837,6 +837,7 @@ const styles = StyleSheet.create({
   },
   modalContent: {
     padding: 24,
+    paddingBottom: 20,
   },
   previewImage: {
     width: '100%',

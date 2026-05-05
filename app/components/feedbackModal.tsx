@@ -15,6 +15,8 @@ import { getTheme } from '../context/theme';
 import { useAuth } from '../context/authContext';
 import { supabase } from '../services/supabaseClient';
 import { Linking } from 'react-native';
+import { useProStatus } from '../hooks/useProStatus';
+import ProPromptModal from './proPromptModal';
 
 type Tab = 'rate' | 'feedback' | 'ideas';
 
@@ -53,6 +55,10 @@ export default function FeedbackModal({ visible, onClose }: FeedbackModalProps) 
   const [reqSubject, setReqSubject] = useState('');
   const [reqDescription, setReqDescription] = useState('');
   const [submitting, setSubmitting] = useState(false);
+
+  // isPro
+  const { isPro } = useProStatus();
+  const [showProPrompt, setShowProPrompt] = useState(false);
 
   useEffect(() => {
     if (visible && activeTab === 'ideas') {
@@ -278,8 +284,12 @@ export default function FeedbackModal({ visible, onClose }: FeedbackModalProps) 
           <TouchableOpacity
             style={[styles.submitRequestButton, { backgroundColor: theme.button }]}
             onPress={() => {
+              if (!isPro) {
+                setShowProPrompt(true);
+                return;
+              }
               if (!user) {
-                Alert.alert('Sign in required', 'Please sign in to submit feature requests.');
+                Alert.alert('Sign in required', 'Please sign in to submit.');
                 return;
               }
               setShowSubmitForm(true);
@@ -322,7 +332,13 @@ export default function FeedbackModal({ visible, onClose }: FeedbackModalProps) 
                         { backgroundColor: theme.cardInner },
                         request.userVote === 1 && { backgroundColor: '#10B981' },
                       ]}
-                      onPress={() => handleVote(request.id, 1)}
+                      onPress={() => {
+                          if (!isPro) {
+                            setShowProPrompt(true);
+                            return;
+                          }
+                        handleVote(request.id, 1);
+                      }}
                     >
                       <Text style={styles.voteButtonText}>👍 {request.upvotes}</Text>
                     </TouchableOpacity>
@@ -332,7 +348,13 @@ export default function FeedbackModal({ visible, onClose }: FeedbackModalProps) 
                         { backgroundColor: theme.cardInner },
                         request.userVote === -1 && { backgroundColor: '#EF4444' },
                       ]}
-                      onPress={() => handleVote(request.id, -1)}
+                      onPress={() => {
+                          if (!isPro) {
+                            setShowProPrompt(true);
+                            return;
+                          }
+                        handleVote(request.id, 1);
+                      }}
                     >
                       <Text style={styles.voteButtonText}>👎 {request.downvotes}</Text>
                     </TouchableOpacity>
@@ -442,6 +464,12 @@ export default function FeedbackModal({ visible, onClose }: FeedbackModalProps) 
           {activeTab === 'ideas' && renderIdeasTab()}
         </View>
       </View>
+      <ProPromptModal
+        visible={showProPrompt}
+        onClose={() => setShowProPrompt(false)}
+        feature="Community Features"
+        description="Submit feature requests and vote on ideas with a Pro membership. Help shape the future of Capsule!"
+      />
     </Modal>
   );
 }

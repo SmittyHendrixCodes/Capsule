@@ -160,16 +160,12 @@ const ReceiptModal = ({
   onClose,
   onEdit,
   theme,
-  canEditReceipt,
-  onShowProPrompt,
 }: {
   receipt: Receipt | null;
   visible: boolean;
   onClose: () => void;
   onEdit: (receipt: Receipt) => void;
   theme: any,
-  canEditReceipt: boolean;
-  onShowProPrompt: () => void;
 }) => {
   if (!receipt) return null;
 
@@ -303,10 +299,6 @@ const ReceiptModal = ({
           <Text style={[styles.modalTitle, { color: theme.text }]}>{receipt.merchant}</Text>
             <TouchableOpacity
               onPress={() => {
-                if (!canEditReceipt) {
-                  onShowProPrompt();
-                  return;
-                }
                 onClose();
                 onEdit(receipt);
               }}
@@ -687,10 +679,6 @@ export default function LedgerScreen() {
                     );
                   } : handlePress}
                   onLongPress={(receipt) => {
-                    if (!canEditReceipt) {
-                      setShowProPrompt(true);
-                      return;
-                    }
                     setEditingReceipt(receipt);
                     setShowEditModal(true);
                   }}
@@ -716,8 +704,6 @@ export default function LedgerScreen() {
           setShowEditModal(true);
         }}
         theme={theme}
-        canEditReceipt={canEditReceipt}
-        onShowProPrompt={() => setShowProPrompt(true)}
       />
 
       <Modal
@@ -863,6 +849,7 @@ export default function LedgerScreen() {
           onClose={() => {
             setShowEditModal(false);
             setEditingReceipt(null);
+            setTimeout(() => loadReceipts(), 100);
           }}
           onSaved={() => {
             setShowEditModal(false);

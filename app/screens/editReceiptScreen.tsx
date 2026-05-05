@@ -11,6 +11,8 @@ import {
 } from 'react-native';
 import { Receipt, ModuleType } from '../types/receipt';
 import { useReceipts } from '../hooks/useReceipts';
+import { useProStatus } from '../hooks/useProStatus';
+import ProPromptModal from '../components/proPromptModal';
 
 const CATEGORIES = [
   'Food', 'Travel', 'Office', 'Shopping',
@@ -49,6 +51,8 @@ export default function EditReceiptScreen({
   const [cardLast4, setCardLast4] = useState(receipt.cardLast4 || '');
   const [module, setModule] = useState<ModuleType>(receipt.module);
   const [saving, setSaving] = useState(false);
+  const { isPro } = useProStatus();
+  const [showProPrompt, setShowProPrompt] = useState(false);
 
   const handleSave = async () => {
     if (!merchant.trim()) {
@@ -100,8 +104,14 @@ export default function EditReceiptScreen({
           </TouchableOpacity>
           <Text style={styles.title}>Edit Receipt</Text>
           <TouchableOpacity
-            onPress={handleSave}
             style={styles.saveButton}
+            onPress={() => {
+              if (!isPro) {
+                setShowProPrompt(true);
+                return;
+              }
+              handleSave();
+            }}
             disabled={saving}
           >
             <Text style={styles.saveText}>{saving ? 'Saving...' : 'Save'}</Text>
@@ -227,6 +237,12 @@ export default function EditReceiptScreen({
           </View>
 
         </ScrollView>
+          <ProPromptModal
+            visible={showProPrompt}
+            onClose={() => setShowProPrompt(false)}
+            feature="Edit Receipts"
+            description="Editing receipts is a Pro feature. Upgrade to save changes to merchant names, dates, totals and more."
+          />
       </View>
     </Modal>
   );
