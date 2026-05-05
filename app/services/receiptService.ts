@@ -130,7 +130,8 @@ export const checkFuzzyDuplicate = async (
   date: string,
   total: number,
   items: string,
-  userId?: string
+  userId?: string,
+  allowFuzzy: boolean = false,
 ): Promise<{ isDuplicate: boolean; isFuzzy: boolean; existing?: any }> => {
   
   const tolerance = Math.max(1.00, total * 0.05); // $1 or 5% whichever is higher
@@ -157,6 +158,9 @@ export const checkFuzzyDuplicate = async (
   if (exactMatch && exactMatch.length > 0) {
     return { isDuplicate: true, isFuzzy: false, existing: exactMatch[0] };
   }
+
+  // Fuzzy check — Pro only
+  if (!allowFuzzy) return { isDuplicate: false, isFuzzy: false };
 
   // Fuzzy check — same merchant, same date, total within tolerance
   const { data: fuzzyMatch } = await supabase

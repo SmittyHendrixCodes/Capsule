@@ -23,7 +23,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   animation: {
-    width: 300,
-    height: 300,
+    width: 150,
+    height: 150,
   },
 });

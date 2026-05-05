@@ -18,11 +18,12 @@ import SettingsSidebar from '../components/settingsSidebar';
 import { useSettings } from '../context/settingsContext';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { getTheme } from '../context/theme';
-import OnboardingOverlay from '../components/onboardingOverlay';
 import ProPromptModal from '../components/proPromptModal';
 import { useProStatus } from '../hooks/useProStatus';
 import CalendarView from '../components/calendarView';
 import FeedbackModal from '../components/feedbackModal';
+import EditReceiptScreen from './editReceiptScreen';
+import ReceiptModal from '../components/receiptModal';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
 
@@ -38,19 +39,22 @@ const CATEGORY_COLORS = [
   '#F59E0B', '#10B981', '#3B82F6', '#1C1C1E',
 ];
 
-export default function HomeScreen() {
+export default function HomeScreen({ onReplayOnboarding }: { onReplayOnboarding?: () => void }) {
   const { receipts, loadReceipts, loading } = useReceipts();
   const navigation = useNavigation<any>();
 
   const [greeting, setGreeting] = useState('');
   const [showSettings, setShowSettings] = useState(false);
-  const [showOnboarding, setShowOnboarding] = useState(false);
   const { darkMode } = useSettings();
   const theme = getTheme(darkMode);
   const { canViewAllCharts, isPro } = useProStatus();
   const [showProPrompt, setShowProPrompt] = useState(false);
   const [chartView, setChartView] = useState<'line' | 'calendar'>('line');
   const [showFeedback, setShowFeedback] = useState(false);
+  const [selectedReceipt, setSelectedReceipt] = useState<Receipt | null>(null);
+  const [modalVisible, setModalVisible] = useState(false);
+  const [editingReceipt, setEditingReceipt] = useState<Receipt | null>(null);
+  const [showEditModal, setShowEditModal] = useState(false);
 
   useFocusEffect(
     useCallback(() => {
@@ -368,7 +372,14 @@ return (
         <View style={styles.section}>
           <Text style={[styles.sectionTitle, { color: theme.text }]}>🕐 Recent Receipts</Text>
           {recentReceipts.map((receipt) => (
-            <View key={receipt.id} style={[styles.recentCard, { backgroundColor: theme.card }]}>
+            <TouchableOpacity
+              key={receipt.id}
+              onPress={() => {
+                setSelectedReceipt(receipt);
+                setModalVisible(true);
+              }}
+              style={[styles.recentCard, { backgroundColor: theme.card }]}
+            >
               <View style={styles.recentLeft}>
                 <Text style={[styles.recentModule, { color: theme.button }]}>
                   {MODULE_EMOJI[receipt.module]} {receipt.module.toUpperCase()}
@@ -382,7 +393,7 @@ return (
                   {receipt.category}
                 </Text>
               </View>
-            </View>
+            </TouchableOpacity>
           ))}
           <TouchableOpacity
             style={[styles.viewAllButton, { backgroundColor: darkMode ? 'rgba(255,255,255,0.1)' : 'rgba(255,255,255,0.2)' }]}
@@ -406,22 +417,10 @@ return (
 
     </ScrollView>
 
-    {/* Overlays */}
-      {showOnboarding && (
-        <OnboardingOverlay
-          currentScreen="Home"
-          onNavigate={() => {}}
-          onComplete={async () => {
-            await AsyncStorage.setItem('onboarding_complete', 'true');
-            setShowOnboarding(false);
-          }}
-        />
-      )}
-
       <SettingsSidebar
         visible={showSettings}
         onClose={() => setShowSettings(false)}
-        onReplayOnboarding={() => setShowOnboarding(true)}
+        onReplayOnboarding={onReplayOnboarding || (() => {})}
         onViewProfile={() => navigation.navigate('Profile')}
         onOpenFeedback={() => setShowFeedback(true)}
       />
@@ -437,7 +436,36 @@ return (
         feature="Advanced Analytics"
         description="Unlock category breakdowns, card spending analysis and more with Pro."
       />
+      <ReceiptModal
+        receipt={selectedReceipt}
+        visible={modalVisible}
+        onClose={() => {
+          setModalVisible(false);
+          setSelectedReceipt(null);
+        }}
+        onEdit={(receipt) => {
+          setModalVisible(false);
+          setEditingReceipt(receipt);
+          setShowEditModal(true);
+        }}
+        theme={theme}
+      />
 
+      {editingReceipt && (
+        <EditReceiptScreen
+          receipt={editingReceipt}
+          visible={showEditModal}
+          onClose={() => {
+            setShowEditModal(false);
+            setEditingReceipt(null);
+          }}
+          onSaved={() => {
+            setShowEditModal(false);
+            setEditingReceipt(null);
+            loadReceipts();
+          }}
+        />
+      )}
     </View>
   );
 }

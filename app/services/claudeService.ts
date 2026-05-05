@@ -93,12 +93,12 @@ export const analyzeReceipt = async (base64Image: string): Promise<ReceiptData> 
               },
               {
                 type: 'text',
-                text: `Analyze this receipt and extract the following information in JSON format only, no other text:
+                text: `Analyze this receipt, invoice, billing statement, or digital invoice and extract the following information in JSON format only, no other text:
                 {
-                  "merchant": "store or vendor name",
+                  "merchant": "store, business, or vendor name",
                   "date": "date of purchase in YYYY-MM-DD format",
-                  "total": total amount as a number,
-                  "category": "one of: Food, Travel, Office, Shopping, Utilities, Medical, Entertainment, Other",
+                  "total": total amount as a number only,
+                  "category": "one of: Food, Travel, Office, Shopping, Utilities, Medical, Entertainment, or Other if no category fits",
                   "items": ["list", "of", "purchased", "items"],
                   "description": "brief one sentence summary of the purchase"
                   "cardLast4: "last 4 digits of the card used if visible on receipt, otherwise return 'Cash / Not Available'"
@@ -118,13 +118,17 @@ export const analyzeReceipt = async (base64Image: string): Promise<ReceiptData> 
     );
     const content = response.data.content[0].text;
     const cleaned = content.replace(/```json|```/g, '').trim();
+
+    const jsonMatch = cleaned.match(/\{[\s\S]*\}/);
+      if (!jsonMatch) {
+        throw new Error('No JSON found in response');
+    }
     const parsed = JSON.parse(cleaned) as ReceiptData;
     return {
       ...parsed,
       date: normalizeDate(parsed.date),
     };
   } catch (error: any) {
-
     throw error;
   }
 };

@@ -30,6 +30,7 @@ import { useAuth } from '../context/authContext';
 import { getReceipts } from '../services/receiptService';
 import { hapticMedium, hapticSuccess } from '../utils/haptics';
 import { checkFuzzyDuplicate } from '../services/receiptService';
+import LottieView from 'lottie-react-native';
 
 const SCREEN_HEIGHT = Dimensions.get('window').height;
 
@@ -156,7 +157,8 @@ export default function CaptureScreen() {
           data.date,
           data.total,
           Array.isArray(data.items) ? data.items.join(', ') : data.items,
-          user?.id
+          user?.id,
+          isPro,
         );
 
         // Small delay to let React flush the receipt state first
@@ -401,7 +403,7 @@ export default function CaptureScreen() {
         <View style={[styles.modalContainer, { backgroundColor: theme.background }]}>
           <View style={[styles.modalHeader, { backgroundColor: theme.card }]}>
             <Text style={[styles.modalTitle, { color: theme.text }]}>
-              {loading ? 'Analyzing...' : 'Receipt Details'}
+              {loading ? 'Please wait...' : 'Receipt Details'}
             </Text>
             <TouchableOpacity onPress={handleCloseModal} style={styles.closeButton}>
               <Text style={styles.closeText}>✕</Text>
@@ -410,8 +412,15 @@ export default function CaptureScreen() {
 
           {loading ? (
             <View style={styles.loadingContainer}>
-              <ActivityIndicator size="large" color={theme.accent} />
-                <Text style={[styles.loadingText, { color: theme.text }]}>Claude is reading your receipt...</Text>
+              <LottieView
+                source={require('../../assets/triple_dot_loading.json')}
+                autoPlay
+                loop
+                style={styles.lottieAnimation}
+              />
+              <Text style={[styles.loadingText, { color: theme.text }]}>
+                Analyzing your receipt...
+              </Text>
             </View>
           ) : (
             <ScrollView contentContainerStyle={styles.modalContent}>
@@ -1083,4 +1092,8 @@ const styles = StyleSheet.create({
   groupChipTextActive: {
     color: '#1C1C1E',
   },
+  lottieAnimation: {
+  width: 120,
+  height: 120,
+},
 });

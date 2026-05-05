@@ -21,6 +21,7 @@ export interface OnboardingStep {
   spotlightWidth: number;
   spotlightHeight: number;
   tooltipPosition: 'top' | 'bottom';
+  tooltipOffset?: number;
 }
 
 const STEPS: OnboardingStep[] = [
@@ -28,19 +29,19 @@ const STEPS: OnboardingStep[] = [
     screen: 'Home',
     title: '📊 Your Dashboard',
     description: 'Track your spending at a glance. See this month\'s total, top merchants, and spending trends all in one place.',
-    spotlightY: 180,
-    spotlightX: 24,
-    spotlightWidth: SCREEN_WIDTH - 48,
-    spotlightHeight: 160,
+    spotlightY: 150,
+    spotlightX: 23.5,
+    spotlightWidth: SCREEN_WIDTH - 47,
+    spotlightHeight: 389,
     tooltipPosition: 'bottom',
   },
   {
     screen: 'Home',
     title: '📷 Quick Capture',
     description: 'Tap this button anytime to instantly capture a receipt. Claude AI will read and organize it for you automatically.',
-    spotlightY: 68,
-    spotlightX: SCREEN_WIDTH - 140,
-    spotlightWidth: 116,
+    spotlightY: 69,
+    spotlightX: SCREEN_WIDTH - 187,
+    spotlightWidth: 111,
     spotlightHeight: 44,
     tooltipPosition: 'bottom',
   },
@@ -48,40 +49,41 @@ const STEPS: OnboardingStep[] = [
     screen: 'Capture',
     title: '📷 Camera Preview',
     description: 'Point your camera at any receipt. The viewfinder helps you frame it perfectly before capturing.',
-    spotlightY: 130,
-    spotlightX: 24,
-    spotlightWidth: SCREEN_WIDTH - 48,
-    spotlightHeight: SCREEN_HEIGHT * 0.32,
+    spotlightY: 125,
+    spotlightX: 26,
+    spotlightWidth: SCREEN_WIDTH - 52,
+    spotlightHeight: SCREEN_HEIGHT * 0.508,
     tooltipPosition: 'bottom',
   },
   {
     screen: 'Capture',
-    title: '⭕ Capture & Gallery',
+    title: '⭕ Capture',
     description: 'Tap the circle button to snap a photo, or choose from your gallery to upload an existing receipt.',
-    spotlightY: SCREEN_HEIGHT * 0.52,
-    spotlightX: SCREEN_WIDTH / 2 - 80,
-    spotlightWidth: 160,
-    spotlightHeight: 120,
+    spotlightY: SCREEN_HEIGHT * 0.665,
+    spotlightX: SCREEN_WIDTH / 2 - 54,
+    spotlightWidth: 108,
+    spotlightHeight: 105,
     tooltipPosition: 'top',
+    tooltipOffset: 225,
   },
   {
     screen: 'Ledger',
     title: '🧾 Your Ledger',
     description: 'Every captured receipt lives here. Tap any item to view details, search by merchant, or filter by module and date.',
-    spotlightY: 200,
+    spotlightY: 175,
     spotlightX: 24,
     spotlightWidth: SCREEN_WIDTH - 48,
-    spotlightHeight: 200,
+    spotlightHeight: 305,
     tooltipPosition: 'bottom',
   },
   {
     screen: 'Ledger',
     title: '⬆️ Export',
     description: 'Tap Export to generate professional expense reports. Export as PDF, CSV or XML — with an AI-written summary if you want.',
-    spotlightY: 68,
-    spotlightX: SCREEN_WIDTH - 130,
-    spotlightWidth: 106,
-    spotlightHeight: 38,
+    spotlightY: 62,
+    spotlightX: SCREEN_WIDTH - 110,
+    spotlightWidth: 85,
+    spotlightHeight: 36,
     tooltipPosition: 'bottom',
   },
 ];
@@ -158,8 +160,8 @@ export default function OnboardingOverlay({
   } = currentStep;
 
   const tooltipTop = tooltipPosition === 'bottom'
-    ? spotlightY + spotlightHeight + 16
-    : spotlightY - 180;
+    ? spotlightY + spotlightHeight + (currentStep.tooltipOffset || 16)
+    : spotlightY - (currentStep.tooltipOffset || 180);
 
   return (
     <Modal
@@ -204,10 +206,10 @@ export default function OnboardingOverlay({
 
         {/* Spotlight border */}
         <View style={[styles.spotlightBorder, {
-          top: spotlightY - 3,
-          left: spotlightX - 3,
-          width: spotlightWidth + 6,
-          height: spotlightHeight + 6,
+          top: spotlightY - 6,
+          left: spotlightX - 6,
+          width: spotlightWidth + 12,
+          height: spotlightHeight + 12,
         }]} />
 
         {/* Tooltip */}
@@ -262,8 +264,8 @@ const styles = StyleSheet.create({
   spotlightBorder: {
     position: 'absolute',
     borderRadius: 16,
-    borderWidth: 2,
-    borderColor: '#DDDDDD',
+    borderWidth: 6,
+    borderColor: '#ff0000',
   },
   tooltip: {
     position: 'absolute',

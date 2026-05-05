@@ -15,7 +15,6 @@ import HomeScreen from './app/screens/homeScreen';
 import CaptureScreen from './app/screens/captureScreen';
 import LedgerScreen from './app/screens/ledgerScreen';
 import { SettingsProvider } from './app/context/settingsContext';
-import { requestNotificationPermission, setupNotifications } from './app/services/notificationService';
 import * as Notifications from 'expo-notifications';
 import { AuthProvider, useAuth } from './app/context/authContext';
 import * as LocalAuthentication from 'expo-local-authentication';
@@ -63,7 +62,6 @@ function FloatingTabBar({ state, descriptors, navigation }: any) {
             Ledger: '≡',
           };
 
-          // Add this check to filter out Profile tab
           if (!icons[route.name]) return null;
 
           const onPress = () => {
@@ -88,8 +86,8 @@ function FloatingTabBar({ state, descriptors, navigation }: any) {
               {isFocused && (
                 <LinearGradient
                   colors={[
-                    'rgba(255,255,255,0.35)',  // bright top
-                    'rgba(255,255,255,0.05)',  // fade to transparent bottom
+                    'rgba(255,255,255,0.35)',
+                    'rgba(255,255,255,0.05)',
                   ]}
                   start={{ x: 0, y: 0 }}
                   end={{ x: 0, y: 1 }}
@@ -110,12 +108,15 @@ function FloatingTabBar({ state, descriptors, navigation }: any) {
   );
 }
 
-function RootNavigator() {
+function RootNavigator({ 
+  onShowOnboarding,
+  onReplayOnboarding,
+}: { 
+  onShowOnboarding: () => void;
+  onReplayOnboarding: () => void;
+}) {
   const { user, isGuest, loading, ready } = useAuth();
   const [biometricChecked, setBiometricChecked] = useState(false);
-  const [showBiometric, setShowBiometric] = useState(false);
-  const [showOnboarding, setShowOnboarding] = useState(false);
-  const [currentScreen, setCurrentScreen] = useState<'Home' | 'Capture' | 'Ledger'>('Home');
 
   useEffect(() => {
     if (user && !biometricChecked) {
@@ -127,29 +128,16 @@ function RootNavigator() {
     const hasHardware = await LocalAuthentication.hasHardwareAsync();
     const isEnrolled = await LocalAuthentication.isEnrolledAsync();
     if (hasHardware && isEnrolled) {
-      setShowBiometric(true);
       const result = await LocalAuthentication.authenticateAsync({
         promptMessage: 'Welcome back to Capsule',
         fallbackLabel: 'Use Password',
       });
       if (result.success) {
         setBiometricChecked(true);
-        setShowBiometric(false);
       }
     } else {
       setBiometricChecked(true);
     }
-  };
-
-  const handleAuthComplete = async () => {
-    const complete = await AsyncStorage.getItem('onboarding_complete');
-    if (!complete) {
-      setShowOnboarding(true);
-    }
-  };
-
-  const handleNavigate = (screen: 'Home' | 'Capture' | 'Ledger') => {
-    setCurrentScreen(screen);
   };
 
   if (loading || !ready) {
@@ -161,7 +149,16 @@ function RootNavigator() {
   }
 
   if (!user && !isGuest) {
-    return <WelcomeScreen onAuthComplete={handleAuthComplete} />;
+    return (
+      <WelcomeScreen
+        onAuthComplete={async () => {
+          const seen = await AsyncStorage.getItem('onboarding_complete');
+          if (!seen) {
+            onShowOnboarding();
+          }
+        }}
+      />
+    );
   }
 
   if (user && !biometricChecked) {
@@ -176,32 +173,41 @@ function RootNavigator() {
   }
 
   return (
-    <>
-      <Stack.Navigator screenOptions={{ headerShown: false }}>
-        <Stack.Screen name="Main" component={TabNavigator} />
-        <Stack.Screen 
-          name="Profile" 
-          component={ProfileScreen}
-          options={{
-            animation: 'slide_from_right',
-            gestureEnabled: true,
-          }}
-        />
-      </Stack.Navigator>
+    <Stack.Navigator screenOptions={{ headerShown: false }}>
+      <Stack.Screen name="Main">
+        {() => <TabNavigatorWithOnboarding onReplayOnboarding={onReplayOnboarding} />}
+      </Stack.Screen>
+      <Stack.Screen
+        name="Profile"
+        component={ProfileScreen}
+        options={{
+          animation: 'slide_from_right',
+          gestureEnabled: true,
+        }}
+      />
+    </Stack.Navigator>
+  );
+}
 
-        {showOnboarding && (
-          <OnboardingOverlay
-            currentScreen={currentScreen}
-            onNavigate={handleNavigate}
-            onComplete={async () => {
-              await AsyncStorage.setItem('onboarding_complete', 'true');
-              setShowOnboarding(false);
-            }}
-          />
-        )}
-      </>
-    );
-  }
+function TabNavigatorWithOnboarding({ onReplayOnboarding }: { onReplayOnboarding: () => void }) {
+  return (
+    <Tab.Navigator
+      tabBar={(props) => <FloatingTabBar {...props} />}
+      tabBarPosition="bottom"
+      screenOptions={{
+        swipeEnabled: true,
+        tabBarStyle: { display: 'none' },
+        tabBarIndicatorStyle: { display: 'none' },
+      }}
+    >
+      <Tab.Screen name="Home">
+        {() => <HomeScreen onReplayOnboarding={onReplayOnboarding} />}
+      </Tab.Screen>
+      <Tab.Screen name="Capture" component={CaptureScreen} />
+      <Tab.Screen name="Ledger" component={LedgerScreen} />
+    </Tab.Navigator>
+  );
+}
 
 export default function App() {
   const [fontsLoaded] = useFonts({
@@ -210,11 +216,13 @@ export default function App() {
     Poppins_700Bold,
   });
   const [showLoading, setShowLoading] = useState(true);
+  const [showOnboarding, setShowOnboarding] = useState(false);
+  const [onboardingScreen, setOnboardingScreen] = useState<'Home' | 'Capture' | 'Ledger'>('Home');
   const navigationRef = useNavigationContainerRef();
 
   useEffect(() => {
     if (fontsLoaded) {
-      setTimeout(() => setShowLoading(false), 2500); // shows for 2.5 seconds
+      setTimeout(() => setShowLoading(false), 2500);
     }
   }, [fontsLoaded]);
 
@@ -228,20 +236,44 @@ export default function App() {
     return () => subscription.remove();
   }, []);
 
+  const handleReplayOnboarding = async () => {
+    await AsyncStorage.removeItem('onboarding_complete');
+    setOnboardingScreen('Home');
+    navigationRef.current?.navigate('Home' as never);
+    setShowOnboarding(true);
+  };
+
   return (
-      <AuthProvider>
-        <SettingsProvider>
-          <SafeAreaProvider>
-            <NavigationContainer ref={navigationRef}>
-              {!fontsLoaded || showLoading ? (
-                <LoadingScreen />
-              ) : (
-              <RootNavigator />
+    <AuthProvider>
+      <SettingsProvider>
+        <SafeAreaProvider>
+          <NavigationContainer ref={navigationRef}>
+            {!fontsLoaded || showLoading ? (
+              <LoadingScreen />
+            ) : (
+              <RootNavigator
+                onShowOnboarding={() => setShowOnboarding(true)}
+                onReplayOnboarding={handleReplayOnboarding}
+              />
+            )}
+          </NavigationContainer>
+
+          {showOnboarding && (
+            <OnboardingOverlay
+              currentScreen={onboardingScreen}
+              onNavigate={(screen) => {
+                setOnboardingScreen(screen as 'Home' | 'Capture' | 'Ledger');
+                navigationRef.current?.navigate(screen as never);
+              }}
+              onComplete={async () => {
+                await AsyncStorage.setItem('onboarding_complete', 'true');
+                setShowOnboarding(false);
+              }}
+            />
           )}
-            </NavigationContainer>
-          </SafeAreaProvider>
-        </SettingsProvider>
-      </AuthProvider>
+        </SafeAreaProvider>
+      </SettingsProvider>
+    </AuthProvider>
   );
 }
 
