@@ -36,6 +36,7 @@ export const getReceipts = async (userId?: string): Promise<Receipt[]> => {
     module: r.module,
     cardLast4: r.card_last4,
     imageUri: r.image_url,
+    group_id: r.group_id,
   }));
 };
 

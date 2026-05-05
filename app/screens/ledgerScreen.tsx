@@ -29,10 +29,10 @@ import { useSettings } from '../context/settingsContext';
 import { useProStatus } from '../hooks/useProStatus';
 import ProPromptModal from '../components/proPromptModal';
 import GroupManagerModal from '../components/groupManagerModal';
-import { Group } from '../services/groupService';
-import { assignReceiptToGroup } from '../services/groupService';
+import { Group, getGroups, assignReceiptToGroup } from '../services/groupService';
 import { hapticMedium } from '../utils/haptics';
 import ReceiptModal from '../components/receiptModal';
+import { useAuth } from '../context/authContext';
 
 const MODULE_EMOJI: Record<string, string> = {
   work: '💼',
@@ -48,6 +48,8 @@ const ReceiptCard = ({
   onLongPress,
   index,
   theme,
+  groups,
+  onAssignGroup,
 }: {
   receipt: Receipt;
   onDelete: (id: number) => void;
@@ -55,11 +57,14 @@ const ReceiptCard = ({
   onLongPress: (receipt: Receipt) => void;
   index: number;
   theme: any,
+  groups: Group[];
+  onAssignGroup: (receiptId: number | string, groupId: string | null) => void;
 }) => {
   const opacity = React.useRef(new Animated.Value(0)).current;
   const translateY = React.useRef(new Animated.Value(20)).current;
   const translateX = React.useRef(new Animated.Value(0)).current;
   const deleteOpacity = React.useRef(new Animated.Value(1)).current;
+  const [showGroupPicker, setShowGroupPicker] = useState(false);
 
   const handleDelete = () => {
     Alert.alert(
@@ -119,7 +124,9 @@ const ReceiptCard = ({
   return (
     <Animated.View style={{ 
       opacity: deleteOpacity, 
-      transform: [{ translateY }, { translateX}]
+      transform: [{ translateY }, { translateX}],
+      zIndex: showGroupPicker ? 999 : 1,
+      elevation: showGroupPicker ? 999 : 1,
       }}>
       <TouchableOpacity 
         onPress={() => onPress(receipt)}
@@ -142,6 +149,66 @@ const ReceiptCard = ({
           </View>
           <Text style={[styles.description, { color: theme.subtext }]}>{receipt.description}</Text>
           <View style={styles.cardFooter}>
+          <View>  
+            <TouchableOpacity
+              style={styles.groupTagButton}
+              onPress={() => setShowGroupPicker(!showGroupPicker)}
+            >
+              <Text style={styles.groupTagText}>
+                {(receipt as any).group_id
+                  ? `📁 ${groups.find(g => g.id === (receipt as any).group_id)?.name || 'Group'}`
+                  : '📁 Add Group'}
+              </Text>
+            </TouchableOpacity>
+            {showGroupPicker && (
+              <View style={[styles.groupDropdown, { backgroundColor: theme.card }]}>
+                <ScrollView
+                  nestedScrollEnabled={true}
+                  style={{ maxHeight: 200 }}  // ← limits height, enables scroll
+                  keyboardShouldPersistTaps="handled"
+                >
+                <TouchableOpacity
+                  style={styles.groupDropdownItem}
+                  onPress={() => {
+                    receipt.id && onAssignGroup(receipt.id, null);
+                    setShowGroupPicker(false);
+                  }}
+                >
+                  <Text style={[styles.groupDropdownText, { color: theme.text }]}>
+                    None
+                  </Text>
+                </TouchableOpacity>
+                {groups.length === 0 ? (
+                  <Text style={[styles.groupDropdownText, { color: theme.subtext, padding: 8 }]}>
+                    No groups yet
+                  </Text>
+                ) : (
+                  groups.map(g => (
+                    <TouchableOpacity
+                      key={g.id}
+                      style={[
+                        styles.groupDropdownItem,
+                        (receipt as any).group_id === g.id && { backgroundColor: theme.cardInner }
+                      ]}
+                      onPress={() => {
+                        receipt.id && onAssignGroup(receipt.id, g.id);
+                        setShowGroupPicker(false);
+                      }}
+                    >
+                      <Text style={[styles.groupDropdownText, { color: theme.text }]}>
+                        📁 {g.name}
+                      </Text>
+                      {(receipt as any).group_id === g.id && (
+                        <Text style={{ color: theme.button }}>✓</Text>
+                      )}
+                    </TouchableOpacity>
+                  ))
+                )}
+                </ScrollView>
+              </View>
+            )}
+          </View>
+            
             <TouchableOpacity
               style={styles.deleteButton}
               onPress={ handleDelete}
@@ -179,12 +246,22 @@ export default function LedgerScreen() {
   const displayReceipts = getFilteredReceipts(receipts);
   const [showGroupManager, setShowGroupManager] = useState(false);
   const [selectedGroup, setSelectedGroup] = useState<Group | null>(null);
+  const { user } = useAuth();
+  const [groups, setGroups] = useState<Group[]>([]);
 
-    useFocusEffect(
-      useCallback(() => {
-        loadReceipts();
-      }, [])
-    );
+  const handleAssignGroup = async (receiptId: number | string, groupId: string | null) => {
+    await assignReceiptToGroup(receiptId, groupId);
+    await loadReceipts();
+  };
+
+  useFocusEffect(
+    useCallback(() => {
+      loadReceipts();
+      if (user && isPro) {
+        getGroups(user.id).then(setGroups);
+      }
+    }, [user, isPro])
+  );
 
   const filteredReceipts = displayReceipts.filter((r) => {
     const searchLower = search.toLowerCase();
@@ -457,6 +534,8 @@ export default function LedgerScreen() {
                   }}
                   index={index}
                   theme={theme}
+                  groups={groups}
+                  onAssignGroup={handleAssignGroup}
                 />
               </View>
             </View>
@@ -488,6 +567,12 @@ export default function LedgerScreen() {
         <View style={[styles.filterModalContainer, { backgroundColor: theme.background }]}>
           <View style={[styles.filterModalHeader, { backgroundColor: theme.card }]}>
             <Text style={[styles.filterModalTitle, { color: theme.text }]}>Filter</Text>
+              <TouchableOpacity
+                onPress={() => setShowFilterModal(false)}
+                style={styles.filterModalClose}
+              >
+                <Text style={styles.filterModalCloseText}>✕</Text>
+              </TouchableOpacity>
           </View>
           <ScrollView contentContainerStyle={styles.filterModalContent}>
             <Text style={[styles.filterSection, { color: theme.subtext }]}>Module</Text>
@@ -857,7 +942,8 @@ const styles = StyleSheet.create({
   },
   cardFooter: {
     flexDirection: 'row',
-    justifyContent: 'flex-end',
+    justifyContent: 'space-between',
+    alignItems: 'center',
     borderTopWidth: 1,
     borderTopColor: '#F3F4F6',
     paddingTop: 10,
@@ -899,19 +985,37 @@ const styles = StyleSheet.create({
     backgroundColor: '#53727B',
   },
   filterModalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+     flexDirection: 'row',
+    justifyContent: 'center',
     alignItems: 'center',
-    padding: 24,
-    paddingTop: 60,
+    padding: 16,
+    paddingTop: 12,
+    paddingHorizontal: 52,
     backgroundColor: '#fff',
     borderBottomWidth: 1,
     borderBottomColor: '#F3F4F6',
   },
   filterModalTitle: {
-    fontSize: 22,
+    fontSize: 24,
     fontFamily: 'Poppins_700Bold',
     color: '#1F2937',
+    textAlign: 'center',
+  },
+  filterModalClose: {
+    backgroundColor: '#F3F4F6',
+    borderRadius: 20,
+    width: 36,
+    height: 36,
+    alignItems: 'center',
+    justifyContent: 'center',
+    position: 'absolute',
+    right: 24,
+    top: '35%',
+  },
+  filterModalCloseText: {
+    fontSize: 16,
+    color: '#1C1C1E',
+    fontFamily: 'Poppins_600SemiBold',
   },
   filterModalContent: {
     padding: 24,
@@ -1091,5 +1195,41 @@ const styles = StyleSheet.create({
   },
   groupButtonTextActive: {
     color: '#DDDDDD',
+  },
+  groupTagButton: {
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 8,
+    backgroundColor: 'rgba(0,0,0,0.05)',
+  },
+  groupTagText: {
+    fontSize: 12,
+    fontFamily: 'Poppins_600SemiBold',
+    color: '#53727B',
+  },
+  groupDropdown: {
+    position: 'absolute',
+    top: 36,
+    left: 0,
+    minWidth: 160,
+    borderRadius: 12,
+    shadowColor: '#000',
+    shadowOpacity: 0.15,
+    shadowRadius: 10,
+    elevation: 8,
+    zIndex: 999,
+    overflow: 'hidden',
+  },
+  groupDropdownItem: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(0,0,0,0.05)',
+  },
+  groupDropdownText: {
+    fontSize: 13,
+    fontFamily: 'Poppins_600SemiBold',
   },
 });
