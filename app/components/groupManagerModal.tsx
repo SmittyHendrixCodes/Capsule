@@ -20,6 +20,7 @@ import {
   updateGroup,
   deleteGroup,
 } from '../services/groupService';
+import DateTimePicker from '@react-native-community/datetimepicker';
 
 interface GroupManagerModalProps {
   visible: boolean;
@@ -43,6 +44,8 @@ export default function GroupManagerModal({
   const [mode, setMode] = useState<'list' | 'create' | 'edit'>('list');
   const [editingGroup, setEditingGroup] = useState<Group | null>(null);
   const [showActions, setShowActions] = useState<string | null>(null);
+  const [showDateFrom, setShowDateFrom] = useState(false);
+  const [showDateTo, setShowDateTo] = useState(false);
 
   // Form state
   const [name, setName] = useState('');
@@ -168,22 +171,53 @@ export default function GroupManagerModal({
       <Text style={[styles.charCount, { color: theme.subtext }]}>{name.length}/24</Text>
 
       <Text style={[styles.label, { color: theme.subtext }]}>Date Range</Text>
-      <View style={styles.dateRow}>
-        <TextInput
-          style={[styles.dateInput, { backgroundColor: theme.card, color: theme.text, borderColor: theme.border }]}
-          value={dateFrom}
-          onChangeText={setDateFrom}
-          placeholder="From: YYYY-MM-DD"
-          placeholderTextColor={theme.subtext}
+            
+      {/* Date From */}
+      <TouchableOpacity
+        style={[styles.datePickerButton, { backgroundColor: theme.card, borderColor: theme.border }]}
+        onPress={() => setShowDateFrom(true)}
+      >
+        <Text style={[styles.datePickerText, { color: dateFrom ? theme.text : theme.subtext }]}>
+          {dateFrom || 'From: Select date'}
+        </Text>
+      </TouchableOpacity>
+
+      {showDateFrom && (
+        <DateTimePicker
+          value={dateFrom ? new Date(dateFrom) : new Date()}
+          mode="date"
+          display="spinner"
+          onChange={(event, date) => {
+            setShowDateFrom(false);
+            if (date) {
+              setDateFrom(date.toISOString().split('T')[0]);
+            }
+          }}
         />
-        <TextInput
-          style={[styles.dateInput, { backgroundColor: theme.card, color: theme.text, borderColor: theme.border }]}
-          value={dateTo}
-          onChangeText={setDateTo}
-          placeholder="To: YYYY-MM-DD"
-          placeholderTextColor={theme.subtext}
+      )}
+      {/* Date To */}
+      <TouchableOpacity
+        style={[styles.datePickerButton, { backgroundColor: theme.card, borderColor: theme.border }]}
+        onPress={() => setShowDateTo(true)}
+      >
+        <Text style={[styles.datePickerText, { color: dateTo ? theme.text : theme.subtext }]}>
+          {dateTo || 'To: Select date'}
+        </Text>
+      </TouchableOpacity>
+
+      {showDateTo && (
+        <DateTimePicker
+          value={dateTo ? new Date(dateTo) : new Date()}
+          mode="date"
+          display="spinner"
+          onChange={(event, date) => {
+            setShowDateTo(false);
+            if (date) {
+              setDateTo(date.toISOString().split('T')[0]);
+            }
+          }}
         />
-      </View>
+      )}
 
       <Text style={[styles.label, { color: theme.subtext }]}>Purpose</Text>
       <TextInput
@@ -481,18 +515,6 @@ const styles = StyleSheet.create({
     textAlign: 'right',
     marginTop: -4,
   },
-  dateRow: {
-    flexDirection: 'row',
-    gap: 8,
-  },
-  dateInput: {
-    flex: 1,
-    borderWidth: 1,
-    borderRadius: 10,
-    padding: 12,
-    fontSize: 12,
-    fontFamily: 'Poppins_400Regular',
-  },
   submitButton: {
     paddingVertical: 14,
     borderRadius: 12,
@@ -537,5 +559,15 @@ const styles = StyleSheet.create({
   clearFilterText: {
     fontSize: 14,
     fontFamily: 'Poppins_600SemiBold',
+  },
+  datePickerButton: {
+    borderWidth: 1,
+    borderRadius: 10,
+    padding: 12,
+    marginBottom: 4,
+  },
+  datePickerText: {
+    fontSize: 14,
+    fontFamily: 'Poppins_400Regular',
   },
 });

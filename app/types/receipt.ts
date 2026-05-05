@@ -1,15 +1,15 @@
 export interface Receipt {
-  id?: number;
+  id?: number | string;
   merchant: string;
   date: string;
   total: number;
   category: string;
-  items: string;
+  items: string | string[];
   description: string;
-  module: 'work' | 'tax' | 'personal' | 'general';
+  module: string;
   imageUri?: string;
   cardLast4?: string;
   created_at?: string;
 }
 
-export type ModuleType = 'work' | 'tax' | 'personal' | 'general';
+export type ModuleType = string;

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -13,17 +13,14 @@ import { Receipt, ModuleType } from '../types/receipt';
 import { useReceipts } from '../hooks/useReceipts';
 import { useProStatus } from '../hooks/useProStatus';
 import ProPromptModal from '../components/proPromptModal';
+import { getAllModules, DEFAULT_MODULES } from '../services/moduleService';
+import { useAuth } from '../context/authContext';
+import { getTheme } from '../context/theme';
+import { useSettings } from '../context/settingsContext';
 
 const CATEGORIES = [
   'Food', 'Travel', 'Office', 'Shopping',
   'Utilities', 'Medical', 'Entertainment', 'Other'
-];
-
-const MODULE_OPTIONS: { label: string; value: ModuleType; emoji: string }[] = [
-  { label: 'Work Expense', value: 'work', emoji: '💼' },
-  { label: 'Tax', value: 'tax', emoji: '🧾' },
-  { label: 'Personal', value: 'personal', emoji: '🏠' },
-  { label: 'General', value: 'general', emoji: '📁' },
 ];
 
 interface EditReceiptScreenProps {
@@ -49,10 +46,20 @@ export default function EditReceiptScreen({
     );
   const [description, setDescription] = useState(receipt.description);
   const [cardLast4, setCardLast4] = useState(receipt.cardLast4 || '');
-  const [module, setModule] = useState<ModuleType>(receipt.module);
   const [saving, setSaving] = useState(false);
   const { isPro } = useProStatus();
   const [showProPrompt, setShowProPrompt] = useState(false);
+  const { user } = useAuth();
+  const [moduleOptions, setModuleOptions] = useState(DEFAULT_MODULES);
+  const [selectedModule, setSelectedModule] = useState(receipt.module || 'general');
+  const { darkMode } = useSettings();
+  const theme = getTheme(darkMode);
+
+    useEffect(() => {
+      if (user) {
+        getAllModules(user.id).then(setModuleOptions);
+      }
+    }, [user]);
 
   const handleSave = async () => {
     if (!merchant.trim()) {
@@ -79,7 +86,7 @@ export default function EditReceiptScreen({
         items,
         description: description.trim(),
         cardLast4: cardLast4.trim() || 'Cash / Not Available',
-        module,
+        module: selectedModule,
       });
       onSaved();
     } catch (error) {
@@ -191,20 +198,37 @@ export default function EditReceiptScreen({
 
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>📁 Module</Text>
-            <View style={styles.moduleRow}>
-              {MODULE_OPTIONS.map((mod) => (
+            <ScrollView 
+              horizontal 
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.moduleScroll}
+            >
+              {moduleOptions.map((mod) => (
                 <TouchableOpacity
-                  key={mod.value}
-                  style={[styles.moduleButton, module === mod.value && styles.moduleButtonActive]}
-                  onPress={() => setModule(mod.value)}
+                  key={mod.id}
+                  style={[
+                    styles.moduleChip,
+                    { 
+                      backgroundColor: selectedModule === mod.id 
+                        ? '#DDDDDD'
+                        : 'rgba(255,255,255,0.15)',
+                      borderColor: selectedModule === mod.id 
+                        ? '#DDDDDD'
+                        : 'rgba(255,255,255,0.3)',
+                    },
+                  ]}
+                  onPress={() => setSelectedModule(mod.id)}
                 >
-                  <Text style={styles.moduleEmoji}>{mod.emoji}</Text>
-                  <Text style={[styles.moduleLabel, module === mod.value && styles.moduleLabelActive]}>
-                    {mod.label}
+                  <Text style={styles.moduleChipEmoji}>{mod.emoji}</Text>
+                  <Text style={[
+                    styles.moduleChipText,
+                    { color: selectedModule === mod.id ? '#1C1C1E' : '#fff' }
+                  ]}>
+                    {mod.name}
                   </Text>
                 </TouchableOpacity>
               ))}
-            </View>
+            </ScrollView>
           </View>
 
           <View style={styles.section}>
@@ -255,22 +279,29 @@ const styles = StyleSheet.create({
   },
   header: {
     flexDirection: 'row',
+    justifyContent: 'center',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    padding: 24,
-    paddingTop: 60,
+    padding: 16,
+    paddingTop: 12,
+    paddingHorizontal: 52,
     backgroundColor: '#fff',
     borderBottomWidth: 1,
     borderBottomColor: '#F3F4F6',
   },
   title: {
-    fontSize: 18,
+    fontSize: 24,
     fontFamily: 'Poppins_700Bold',
-    color: '#1C1C1E',
+    color: '#1F2937',
+    textAlign: 'center',
   },
   cancelButton: {
     paddingVertical: 6,
     paddingHorizontal: 4,
+    alignItems: 'center',
+    justifyContent: 'center',
+    position: 'absolute',
+    left: 24,
+    top: '35%',
   },
   cancelText: {
     fontSize: 15,
@@ -282,6 +313,11 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     paddingHorizontal: 16,
     borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+    position: 'absolute',
+    right: 24,
+    top: '35%',
   },
   saveText: {
     fontSize: 15,
@@ -304,9 +340,12 @@ const styles = StyleSheet.create({
     color: '#fff',
     marginBottom: 4,
   },
-  field: {
-    gap: 6,
-  },
+field: {
+  borderRadius: 16,
+  padding: 0,
+  marginBottom: 0,
+  gap: 6,
+},
   label: {
     fontSize: 13,
     fontFamily: 'Poppins_600SemiBold',
@@ -380,10 +419,34 @@ const styles = StyleSheet.create({
   moduleLabel: {
     fontSize: 12,
     fontFamily: 'Poppins_400Regular',
-    color: 'rgba(255,255,255,0.8)',
+    color: 'rgba(255,255,255,0.7)',
   },
   moduleLabelActive: {
     color: '#1C1C1E',
+    fontFamily: 'Poppins_600SemiBold',
+  },
+  moduleScroll: {
+    paddingVertical: 8,
+    gap: 8,
+    flexDirection: 'row',
+  },
+  moduleChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.2)',
+    backgroundColor: 'rgba(255,255,255,0.08)',
+    gap: 6,
+    marginRight: 8,
+  },
+  moduleChipEmoji: {
+    fontSize: 16,
+  },
+  moduleChipText: {
+    fontSize: 13,
     fontFamily: 'Poppins_600SemiBold',
   },
 });

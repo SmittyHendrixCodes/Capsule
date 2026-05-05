@@ -14,11 +14,15 @@ import {
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useSettings } from '../context/settingsContext';
+import { getTheme } from '../context/theme';
 import { ModuleType } from '../types/receipt';
 import { useAuth } from '../context/authContext';
 import { supabase } from '../services/supabaseClient';
 import FeedbackModal from './feedbackModal';
 import { useProStatus } from '../hooks/useProStatus';
+import ModuleManagerModal from './moduleManagerModal';
+import ProPromptModal from './proPromptModal';
+import { getAllModules, DEFAULT_MODULES } from '../services/moduleService';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
 const SIDEBAR_WIDTH = SCREEN_WIDTH * 0.82;
@@ -65,6 +69,10 @@ export default function SettingsSidebar({
   const [showFeedback, setShowFeedback] = useState(false);
   const { canUseDarkMode } = useProStatus();
   const [showProPrompt, setShowProPrompt] = useState(false);
+  const { isPro } = useProStatus();
+  const [showModuleManager, setShowModuleManager] = useState(false);
+  const [allModules, setAllModules] = useState(DEFAULT_MODULES);
+  const theme = getTheme(darkMode);
 
   useEffect(() => {
     if (user) {
@@ -76,6 +84,12 @@ export default function SettingsSidebar({
         .then(({ data }) => {
           if (data) setProfile(data);
         });
+    }
+  }, [user]);
+
+  useEffect(() => {
+    if (user) {
+      getAllModules(user.id).then(setAllModules);
     }
   }, [user]);
 
@@ -211,23 +225,37 @@ export default function SettingsSidebar({
 
               {/* Default Module */}
               <View style={[styles.card, { backgroundColor: cardBg }]}>
-                <Text style={[styles.cardTitle, { color: textColor }]}>📁 Default Module</Text>
+                <View style={styles.cardTitleRow}>
+                  <Text style={[styles.cardTitle, { color: textColor }]}>📁 Default Module</Text>
+                  <TouchableOpacity
+                    onPress={() => {
+                      if (!isPro) {
+                        setShowProPrompt(true);
+                        return;
+                      }
+                        onClose();
+                        setTimeout(() => setShowModuleManager(true), 400);
+                    }}
+                  >
+                    <Text style={[styles.actionText, { color: theme.button }]}>Manage →</Text>
+                  </TouchableOpacity>
+                </View>
                 <View style={styles.moduleGrid}>
-                  {MODULE_OPTIONS.map((mod) => (
+                  {allModules.map((mod) => (
                     <TouchableOpacity
-                      key={mod.value}
+                      key={mod.id}
                       style={[
                         styles.moduleChip,
-                        defaultModule === mod.value && styles.moduleChipActive,
+                        defaultModule === mod.id && styles.moduleChipActive,
                       ]}
-                      onPress={() => setDefaultModule(mod.value)}
+                      onPress={() => setDefaultModule(mod.id)}
                     >
                       <Text style={styles.moduleChipEmoji}>{mod.emoji}</Text>
                       <Text style={[
                         styles.moduleChipText,
-                        defaultModule === mod.value && styles.moduleChipTextActive,
+                        defaultModule === mod.id && styles.moduleChipTextActive,
                       ]}>
-                        {mod.label}
+                        {mod.name}
                       </Text>
                     </TouchableOpacity>
                   ))}
@@ -339,6 +367,22 @@ export default function SettingsSidebar({
           </Animated.View>
         </View>
       </Modal>
+      <ModuleManagerModal
+        visible={showModuleManager}
+        onClose={() => {
+          setShowModuleManager(false);
+          // Reload modules so new ones appear immediately
+          if (user) {
+            getAllModules(user.id).then(setAllModules);
+          }
+        }}
+      />
+      <ProPromptModal
+        visible={showProPrompt}
+        onClose={() => setShowProPrompt(false)}
+        feature="Custom Modules"
+        description="Create up to 12 custom modules to organize receipts your way. Pro feature."
+      />
       <FeedbackModal
         visible={showFeedback}
         onClose={() => setShowFeedback(false)}
@@ -573,5 +617,11 @@ const styles = StyleSheet.create({
   itemText: {
     fontSize: 14,
     fontFamily: 'Poppins_600SemiBold',
+  },
+  cardTitleRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
   },
 });

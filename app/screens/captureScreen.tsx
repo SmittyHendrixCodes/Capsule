@@ -31,15 +31,9 @@ import { getReceipts } from '../services/receiptService';
 import { hapticMedium, hapticSuccess } from '../utils/haptics';
 import { checkFuzzyDuplicate } from '../services/receiptService';
 import LottieView from 'lottie-react-native';
+import { getAllModules, DEFAULT_MODULES } from '../services/moduleService';
 
 const SCREEN_HEIGHT = Dimensions.get('window').height;
-
-const MODULE_OPTIONS: { label: string; value: ModuleType; emoji: string }[] = [
-  { label: 'Work Expense', value: 'work', emoji: '💼' },
-  { label: 'Tax', value: 'tax', emoji: '🧾' },
-  { label: 'Personal', value: 'personal', emoji: '🏠' },
-  { label: 'General', value: 'general', emoji: '📁' },
-];
 
 export default function CaptureScreen() {
   const [permission, requestPermission] = useCameraPermissions();
@@ -69,12 +63,33 @@ export default function CaptureScreen() {
   const [duplicateType, setDuplicateType] = useState<'exact' | 'fuzzy' | null>(null);
   const duplicateRef = useRef<{ type: 'exact' | 'fuzzy', data: any } | null>(null);
 
+  const [moduleOptions, setModuleOptions] = useState(
+    DEFAULT_MODULES.map(m => ({
+      label: m.name,
+      value: m.id as ModuleType,
+      emoji: m.emoji,
+    }))
+  );
+
+
   useFocusEffect(
     useCallback(() => {
       setCameraActive(true);
       return () => setCameraActive(false);
     }, [])
   );
+
+  useEffect(() => {
+    if (user) {
+      getAllModules(user.id).then(modules => {
+        setModuleOptions(modules.map(m => ({
+          label: m.name,
+          value: m.id as ModuleType,
+          emoji: m.emoji,
+        })));
+      });
+    }
+  }, [user]);
 
   useEffect(() => {
     if (!permission?.granted) {
@@ -534,7 +549,7 @@ export default function CaptureScreen() {
                   <View style={[styles.modalCard, { backgroundColor: theme.card }]}>
                     <Text style={[styles.modalSectionTitle, { color: theme.text }]}>Save to Module</Text>
                     <View style={styles.moduleRow}>
-                      {MODULE_OPTIONS.map((mod) => (
+                      {moduleOptions.map((mod) => (
                         <TouchableOpacity
                           key={mod.value}
                           style={[

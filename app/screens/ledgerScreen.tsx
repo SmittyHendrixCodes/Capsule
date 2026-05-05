@@ -52,7 +52,7 @@ const ReceiptCard = ({
   onAssignGroup,
 }: {
   receipt: Receipt;
-  onDelete: (id: number) => void;
+  onDelete: (id: number | string) => void;
   onPress: (receipt: Receipt) => void;
   onLongPress: (receipt: Receipt) => void;
   index: number;
@@ -294,7 +294,7 @@ export default function LedgerScreen() {
     selectedMonth !== 'all',
   ].filter(Boolean).length;
 
-  const handleDelete = useCallback(async (id: number) => {
+  const handleDelete = useCallback(async (id: number | string) => {
     await hapticMedium();
     await removeReceipt(id);
   }, [removeReceipt]);
