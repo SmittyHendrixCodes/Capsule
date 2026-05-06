@@ -107,7 +107,7 @@ export default function FeedbackModal({ visible, onClose }: FeedbackModalProps) 
     setSendingFeedback(true);
     try {
       await Linking.openURL(
-        `mailto:feedback@capsuleapp.com?subject=${encodeURIComponent(subject || 'Capsule Feedback')}&body=${encodeURIComponent(
+        `mailto:feedback@capsuleapp.co.site?subject=${encodeURIComponent(subject || 'Capsule Feedback')}&body=${encodeURIComponent(
           `Rating: ${rating}/5\n\n${comment}`
         )}`
       );
