@@ -12,6 +12,7 @@ interface SettingsContextType {
   setDefaultExportFormat: (value: 'csv' | 'xml' | 'pdf') => void;
   notificationsEnabled: boolean;
   setNotificationsEnabled: (value: boolean) => void;
+  resetForGuest: () => void;
 }
 
 const SettingsContext = createContext<SettingsContextType>({
@@ -23,6 +24,7 @@ const SettingsContext = createContext<SettingsContextType>({
   setDefaultExportFormat: () => {},
   notificationsEnabled: true,
   setNotificationsEnabled: () => {},
+  resetForGuest: () => {},
 });
 
 export const useSettings = () => useContext(SettingsContext);
@@ -74,6 +76,10 @@ export const SettingsProvider = ({ children }: { children: React.ReactNode }) =>
     await setupNotifications(value);
   };
 
+  const resetForGuest = () => {
+    setDarkMode(false);
+  };
+
   return (
     <SettingsContext.Provider value={{
       darkMode,
@@ -84,6 +90,7 @@ export const SettingsProvider = ({ children }: { children: React.ReactNode }) =>
       setDefaultExportFormat,
       notificationsEnabled,
       setNotificationsEnabled,
+      resetForGuest,
     }}>
       {children}
     </SettingsContext.Provider>

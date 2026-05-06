@@ -1,7 +1,7 @@
 import { NavigationContainer, useNavigationContainerRef } from '@react-navigation/native';
 import { createMaterialTopTabNavigator } from '@react-navigation/material-top-tabs';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
-import { View, Text, TouchableOpacity, StyleSheet, ActivityIndicator } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, ActivityIndicator, Alert } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
   useFonts,
@@ -141,23 +141,56 @@ function RootNavigator({
     }
   }, [user]);
 
-  const checkBiometrics = async () => {
-    const hasHardware = await LocalAuthentication.hasHardwareAsync();
-    const isEnrolled = await LocalAuthentication.isEnrolledAsync();
-    if (hasHardware && isEnrolled) {
-      const result = await LocalAuthentication.authenticateAsync({
-        promptMessage: 'Welcome back to Capsule',
-        fallbackLabel: 'Use Password',
-      });
-      if (result.success) {
-        setBiometricChecked(true);
-      } else {
-        setBiometricFailed(true);
-      }
-    } else {
+// Update checkBiometrics:
+const checkBiometrics = async () => {
+  const hasHardware = await LocalAuthentication.hasHardwareAsync();
+  const isEnrolled = await LocalAuthentication.isEnrolledAsync();
+  const previouslyGranted = await AsyncStorage.getItem('biometric_granted');
+  
+  if (hasHardware && isEnrolled && previouslyGranted === 'true') {
+    // Has permission and hardware — prompt Face ID
+    const result = await LocalAuthentication.authenticateAsync({
+      promptMessage: 'Welcome back to Capsule',
+      fallbackLabel: 'Use Password',
+    });
+    if (result.success) {
       setBiometricChecked(true);
+    } else {
+      setBiometricFailed(true);
     }
-  };
+  } else if (hasHardware && isEnrolled && previouslyGranted !== 'true') {
+    // Has hardware but no permission yet — ask first time
+    Alert.alert(
+      'Enable Face ID',
+      'Would you like to use Face ID to quickly access Capsule?',
+      [
+        {
+          text: 'Not Now',
+          onPress: () => {
+            setBiometricChecked(true);
+          }
+        },
+        {
+          text: 'Enable',
+          onPress: async () => {
+            await AsyncStorage.setItem('biometric_granted', 'true');
+            const result = await LocalAuthentication.authenticateAsync({
+              promptMessage: 'Welcome back to Capsule',
+            });
+            if (result.success) {
+              setBiometricChecked(true);
+            } else {
+              setBiometricFailed(true);
+            }
+          }
+        }
+      ]
+    );
+  } else {
+    // No hardware
+    setBiometricChecked(true);
+  }
+};
 
   if (loading || !ready) {
     return (
@@ -171,10 +204,10 @@ function RootNavigator({
     return (
       <WelcomeScreen
         onAuthComplete={async () => {
+          // Reset biometric check so it runs again
+          setBiometricChecked(false);
           const seen = await AsyncStorage.getItem('onboarding_complete');
-          if (!seen) {
-            onShowOnboarding();
-          }
+          if (!seen) onShowOnboarding();
         }}
       />
     );

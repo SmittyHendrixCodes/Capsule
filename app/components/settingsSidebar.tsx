@@ -23,6 +23,7 @@ import { useProStatus } from '../hooks/useProStatus';
 import ModuleManagerModal from './moduleManagerModal';
 import ProPromptModal from './proPromptModal';
 import { getAllModules, DEFAULT_MODULES } from '../services/moduleService';
+import UpgradeModal from './upgradeModal';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
 const SIDEBAR_WIDTH = SCREEN_WIDTH * 0.82;
@@ -129,9 +130,7 @@ export default function SettingsSidebar({
     Alert.alert('Privacy Policy', 'Privacy policy will be available when published.');
   };
 
-  const handleUpgradePro = () => {
-    Alert.alert('Capsule Pro', 'Pro features coming soon! Stay tuned for budget tracking, spending insights and more.');
-  };
+  const [showUpgrade, setShowUpgrade] = useState(false);
 
   return (
     <>
@@ -353,7 +352,7 @@ export default function SettingsSidebar({
               {/* Upgrade to Pro */}
               <TouchableOpacity
                 style={styles.proButton}
-                onPress={handleUpgradePro}
+                onPress={() => setShowUpgrade(true)}
               >
                 <Text style={styles.proEmoji}>💰</Text>
                 <View>
@@ -375,6 +374,13 @@ export default function SettingsSidebar({
           if (user) {
             getAllModules(user.id).then(setAllModules);
           }
+        }}
+      />
+      <UpgradeModal
+        visible={showUpgrade}
+        onClose={() => setShowUpgrade(false)}
+        onUpgraded={() => {
+          setShowUpgrade(false);
         }}
       />
       <ProPromptModal

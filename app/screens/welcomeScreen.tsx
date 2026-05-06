@@ -14,6 +14,7 @@ import {
 } from 'react-native';
 import { useAuth } from '../context/authContext';
 import { supabase } from '../services/supabaseClient';
+import { useSettings } from '../context/settingsContext';
 
 type AuthMode = 'welcome' | 'login' | 'signup' | 'forgot';
 
@@ -23,6 +24,7 @@ interface WelcomeScreenProps {
 
 export default function WelcomeScreen({onAuthComplete}: WelcomeScreenProps) {
   const { signIn, signUp, continueAsGuest } = useAuth();
+  const { resetForGuest } = useSettings();
   const [mode, setMode] = useState<AuthMode>('welcome');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -126,6 +128,7 @@ export default function WelcomeScreen({onAuthComplete}: WelcomeScreenProps) {
             <TouchableOpacity
               style={styles.guestButton}
               onPress={() => {
+                resetForGuest();
                 continueAsGuest();
                 onAuthComplete();
                 }}
@@ -435,8 +438,8 @@ const styles = StyleSheet.create({
     color: 'rgba(255,255,255,0.7)',
   },
   logoImage: {
-    width: 90,
-    height: 90,
+    width: 100,
+    height: 100,
     marginBottom: 12,
   },
 });

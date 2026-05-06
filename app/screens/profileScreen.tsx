@@ -17,6 +17,7 @@ import { getTheme } from '../context/theme';
 import { supabase } from '../services/supabaseClient';
 import { useReceipts } from '../hooks/useReceipts';
 import { useNavigation } from '@react-navigation/native';
+import UpgradeModal from '../components/upgradeModal';
 
 interface Profile {
   id: string;
@@ -39,6 +40,7 @@ export default function ProfileScreen() {
   const [newName, setNewName] = useState('');
   const [saving, setSaving] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+  const [showUpgrade, setShowUpgrade] = useState(false);
 
   useFocusEffect(
     useCallback(() => {
@@ -253,7 +255,10 @@ export default function ProfileScreen() {
 
         {/* Upgrade to Pro */}
         {profile?.plan !== 'pro' && (
-          <TouchableOpacity style={styles.proButton}>
+          <TouchableOpacity 
+            style={styles.proButton}
+            onPress={() => setShowUpgrade(true)}
+          >
             <Text style={styles.proEmoji}>💰</Text>
             <View>
               <Text style={styles.proTitle}>Upgrade to Pro</Text>
@@ -272,6 +277,11 @@ export default function ProfileScreen() {
         </TouchableOpacity>
 
       </ScrollView>
+      <UpgradeModal
+        visible={showUpgrade}
+        onClose={() => setShowUpgrade(false)}
+        onUpgraded={() => setShowUpgrade(false)}
+      />
     </View>
   );
 }
