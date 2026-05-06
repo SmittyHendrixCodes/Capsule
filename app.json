@@ -42,7 +42,8 @@
       "expo-image-picker",
       "expo-notifications",
       "expo-local-authentication",
-      "@react-native-community/datetimepicker"
+      "@react-native-community/datetimepicker",
+      "react-native-purchases"
     ],
     "extra": {
       "eas": {

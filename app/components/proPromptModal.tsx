@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -9,6 +9,7 @@ import {
 } from 'react-native';
 import { useSettings } from '../context/settingsContext';
 import { getTheme } from '../context/theme';
+import UpgradeModal from './upgradeModal';
 
 interface ProPromptModalProps {
   visible: boolean;
@@ -25,62 +26,68 @@ export default function ProPromptModal({
 }: ProPromptModalProps) {
   const { darkMode } = useSettings();
   const theme = getTheme(darkMode);
-
-  const handleUpgrade = () => {
-    Alert.alert('Upgrade to Pro', 'Pro subscriptions coming soon! Stay tuned.');
-    onClose();
-  };
+  const [showUpgrade, setShowUpgrade] = useState(false);
 
   return (
-    <Modal
-      visible={visible}
-      transparent
-      animationType="fade"
-      onRequestClose={onClose}
-    >
-      <View style={styles.overlay}>
-        <View style={[styles.card, { backgroundColor: theme.card }]}>
-          <Text style={styles.emoji}>💰</Text>
-          <Text style={[styles.title, { color: theme.text }]}>
-            {feature} is a Pro Feature
-          </Text>
-          <Text style={[styles.description, { color: theme.subtext }]}>
-            {description}
-          </Text>
-
-          <View style={styles.perks}>
-            {[
-              'Unlimited captures & exports',
-              'All chart views & insights',
-              'Smart AI summaries',
-              'Unlimited receipt history',
-              'Cloud sync across devices',
-            ].map((perk, i) => (
-              <View key={i} style={styles.perkRow}>
-                <Text style={styles.perkCheck}>✓</Text>
-                <Text style={[styles.perkText, { color: theme.text }]}>{perk}</Text>
-              </View>
-            ))}
-          </View>
-
-          <TouchableOpacity
-            style={styles.upgradeButton}
-            onPress={handleUpgrade}
-          >
-            <Text style={styles.upgradeText}>Upgrade to Pro →</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={styles.closeButton}
-            onPress={onClose}
-          >
-            <Text style={[styles.closeText, { color: theme.subtext }]}>
-              Maybe later
+    <>
+      <Modal
+        visible={visible}
+        transparent
+        animationType="fade"
+        onRequestClose={onClose}
+      >
+        <View style={styles.overlay}>
+          <View style={[styles.card, { backgroundColor: theme.card }]}>
+            <Text style={styles.emoji}>💰</Text>
+            <Text style={[styles.title, { color: theme.text }]}>
+              {feature} is a Pro Feature
             </Text>
-          </TouchableOpacity>
+            <Text style={[styles.description, { color: theme.subtext }]}>
+              {description}
+            </Text>
+
+            <View style={styles.perks}>
+              {[
+                'Unlimited captures & exports',
+                'All chart views & insights',
+                'Smart AI summaries',
+                'Unlimited receipt history',
+                'Cloud sync across devices',
+              ].map((perk, i) => (
+                <View key={i} style={styles.perkRow}>
+                  <Text style={styles.perkCheck}>✓</Text>
+                  <Text style={[styles.perkText, { color: theme.text }]}>{perk}</Text>
+                </View>
+              ))}
+            </View>
+
+            <TouchableOpacity
+              style={styles.upgradeButton}
+              onPress={() => setShowUpgrade(true)}
+            >
+              <Text style={styles.upgradeText}>⭐ Upgrade to Pro</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.closeButton}
+              onPress={onClose}
+            >
+              <Text style={[styles.closeText, { color: theme.subtext }]}>
+                Maybe later
+              </Text>
+            </TouchableOpacity>
+          </View>
         </View>
-      </View>
-    </Modal>
+      </Modal>
+      <UpgradeModal
+        visible={showUpgrade}
+        onClose={() => setShowUpgrade(false)}
+        onUpgraded={() => {
+          setShowUpgrade(false);
+          onClose();
+        }}
+      />
+    </>
   );
 }
 

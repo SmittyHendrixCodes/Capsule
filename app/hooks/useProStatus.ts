@@ -2,6 +2,7 @@ import { useAuth } from '../context/authContext';
 import { useReceipts } from './useReceipts';
 import { useState, useEffect } from 'react';
 import { supabase } from '../services/supabaseClient';
+import { isPurchasedPro } from '../services/purchaseService';
 
 const FREE_CAPTURE_LIMIT = 15;
 const FREE_EXPORT_LIMIT = 3;
@@ -23,6 +24,19 @@ export const useProStatus = () => {
       setIsPro(false);
       return;
     }
+
+  // Check RevenueCat first
+  const rcPro = await isPurchasedPro();
+  if (rcPro) {
+    setIsPro(true);
+    // Sync to Supabase
+    await supabase
+      .from('profiles')
+      .update({ plan: 'pro' })
+      .eq('id', user.id);
+    return;
+  }
+
     const { data } = await supabase
       .from('profiles')
       .select('plan')

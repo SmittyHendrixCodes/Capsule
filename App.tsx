@@ -25,6 +25,7 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { LinearGradient } from 'expo-linear-gradient';
 import { hapticLight } from './app/utils/haptics';
 import LoadingScreen from './app/screens/loadingScreen';
+import { initializePurchases } from './app/services/purchaseService';
 
 const Tab = createMaterialTopTabNavigator();
 const Stack = createNativeStackNavigator();
@@ -117,6 +118,14 @@ function RootNavigator({
 }) {
   const { user, isGuest, loading, ready } = useAuth();
   const [biometricChecked, setBiometricChecked] = useState(false);
+
+  useEffect(() => {
+    if (user) {
+      initializePurchases(user.id);
+    } else {
+      initializePurchases();
+    }
+  }, [user]);
 
   useEffect(() => {
     if (user && !biometricChecked) {
@@ -234,6 +243,10 @@ export default function App() {
       }
     });
     return () => subscription.remove();
+  }, []);
+
+  useEffect(() => {
+    initializePurchases();
   }, []);
 
   const handleReplayOnboarding = async () => {
