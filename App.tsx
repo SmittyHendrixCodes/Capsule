@@ -26,6 +26,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { hapticLight } from './app/utils/haptics';
 import LoadingScreen from './app/screens/loadingScreen';
 import { initializePurchases } from './app/services/purchaseService';
+import { supabase } from './app/services/supabaseClient';
 
 const Tab = createMaterialTopTabNavigator();
 const Stack = createNativeStackNavigator();
@@ -118,6 +119,7 @@ function RootNavigator({
 }) {
   const { user, isGuest, loading, ready } = useAuth();
   const [biometricChecked, setBiometricChecked] = useState(false);
+  const [biometricFailed, setBiometricFailed] = useState(false);
 
   useEffect(() => {
     if (user) {
@@ -130,6 +132,12 @@ function RootNavigator({
   useEffect(() => {
     if (user && !biometricChecked) {
       checkBiometrics();
+      const timeout = setTimeout(() => {
+        if (!biometricChecked) {
+          setBiometricFailed(true);
+        }
+      }, 5000);
+      return () => clearTimeout(timeout);
     }
   }, [user]);
 
@@ -143,6 +151,8 @@ function RootNavigator({
       });
       if (result.success) {
         setBiometricChecked(true);
+      } else {
+        setBiometricFailed(true);
       }
     } else {
       setBiometricChecked(true);
@@ -171,6 +181,19 @@ function RootNavigator({
   }
 
   if (user && !biometricChecked) {
+    if (biometricFailed) {
+      supabase.auth.signOut();
+      return (
+        <WelcomeScreen
+          onAuthComplete={async () => {
+            const seen = await AsyncStorage.getItem('onboarding_complete');
+            if (!seen) onShowOnboarding();
+            setBiometricFailed(false);
+            setBiometricChecked(true);
+          }}
+        />
+      );
+    }
     return (
       <View style={{ flex: 1, backgroundColor: '#53727B', alignItems: 'center', justifyContent: 'center' }}>
         <ActivityIndicator size="large" color="#DDDDDD" />
